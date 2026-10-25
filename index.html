@@ -1,0 +1,1121 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E6E9EE">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Trainingslog">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>Trainingslog</title>
+<style>
+/* Layout: "Liquid Glass" – helles Raster, klare Glas-Elemente mit Lichtkanten, farbige Füllungen. Bewusst nur hell, wie die Vorlage. */
+:root{
+  --bg:#E6E9EE; --grid:rgba(30,45,70,.07);
+  --fg:#15171B; --muted:#6A7180; --line:rgba(20,30,50,.08); --line2:rgba(20,30,50,.14);
+  --accent:#2F7BF5; --accent-text:#1E68E0; --accent-soft:rgba(47,123,245,.13); --accent-ink:#FFFFFF;
+  --accent2:#9358F2; --drop:#E98300; --drop-soft:rgba(255,149,0,.15); --good:#1FAA50; --bad:#E2362C;
+  --glass:linear-gradient(160deg,rgba(255,255,255,.62),rgba(255,255,255,.28));
+  --well:rgba(255,255,255,.5);
+  --rim:inset 0 1px 1px rgba(255,255,255,.95), inset 0 -1px 2px rgba(20,30,50,.07), inset 1px 0 2px rgba(255,255,255,.6), inset -1px 0 2px rgba(255,255,255,.35);
+  --lift:0 10px 28px -10px rgba(25,40,70,.28), 0 2px 6px -2px rgba(25,40,70,.12);
+  --blur:blur(18px) saturate(185%);
+  --f-body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;
+  --f-display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,system-ui,sans-serif;
+  --f-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --spring:cubic-bezier(.34,1.56,.64,1);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{
+  margin:0; color:var(--fg); font-family:var(--f-body); font-size:16px; line-height:1.4;
+  -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
+  background:
+    linear-gradient(var(--grid) 1px, transparent 1px) 0 0/34px 34px,
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0/34px 34px,
+    var(--bg);
+  padding-block:calc(14px + env(safe-area-inset-top,0px)) calc(40px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px, env(safe-area-inset-left,0px));
+  padding-right:max(16px, env(safe-area-inset-right,0px));
+  min-width:0; overflow-x:hidden;
+}
+.ambient{position:fixed;inset:-20%;z-index:0;pointer-events:none;filter:blur(50px);opacity:.55;
+  background:
+    radial-gradient(28% 22% at 12% 18%, rgba(47,123,245,.35), transparent 70%),
+    radial-gradient(26% 20% at 90% 34%, rgba(232,70,150,.22), transparent 70%),
+    radial-gradient(28% 22% at 80% 82%, rgba(52,199,89,.25), transparent 70%),
+    radial-gradient(24% 20% at 20% 86%, rgba(255,170,40,.22), transparent 70%);
+  animation:drift 30s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translate3d(3%,-2%,0) rotate(6deg)}}
+main{position:relative;z-index:1;max-width:640px;margin:0 auto}
+h1,h2,.display{font-family:var(--f-display);margin:0;text-wrap:balance}
+h1{font-size:34px;font-weight:700;letter-spacing:-.025em;line-height:1.1}
+h2{font-size:20px;font-weight:600;letter-spacing:-.01em}
+.display{font-weight:600;letter-spacing:-.01em}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.kicker{font-size:13px;color:var(--muted);margin-top:4px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:8px 2px 16px}
+
+/* Glas-Grundmaterial */
+.card,.tabs,details.session,details.p-ex,.p-tile,.pill,.empty,.sheet{
+  background:var(--glass);
+  -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur);
+  border:1px solid rgba(255,255,255,.75);
+  box-shadow:var(--rim), var(--lift);
+}
+.pill{font-size:12px;font-weight:600;border-radius:999px;padding:6px 11px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+.pill::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px rgba(31,170,80,.18)}
+.pill.off{color:var(--drop)}
+.pill.off::before{background:var(--drop);box-shadow:0 0 0 3px var(--drop-soft)}
+
+/* Segment-Control mit gleitender Glaslinse */
+.tabs{position:relative;overflow:hidden;display:grid;grid-template-columns:repeat(3,1fr);margin-bottom:18px;border-radius:999px;padding:4px}
+.lens{position:absolute;top:4px;bottom:4px;left:4px;width:calc((100% - 8px) / 3);border-radius:999px;pointer-events:none;z-index:0;
+  background:linear-gradient(170deg,rgba(255,255,255,.95),rgba(255,255,255,.55));
+  box-shadow:inset 0 1px 1px #fff, inset 0 -2px 4px rgba(20,30,50,.08), 0 6px 16px -6px rgba(25,40,70,.35), 0 0 0 1px rgba(255,255,255,.9);
+  transition:transform .5s cubic-bezier(.3,1.3,.5,1)}
+.lens::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;
+  background:conic-gradient(from 200deg,rgba(47,123,245,.55),rgba(232,70,150,.45),rgba(255,190,40,.5),rgba(52,199,89,.45),rgba(47,123,245,.55));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.55}
+.lens.moving{animation:stretch .55s ease-out}
+@keyframes stretch{40%{scale:1.12 .9}75%{scale:.98 1.03}}
+.tab{position:relative;z-index:1;border:0;background:transparent;color:var(--muted);font:600 14px/1 var(--f-body);padding:11px 4px;border-radius:999px;cursor:pointer;transition:color .3s}
+.tab[aria-selected="true"]{color:var(--fg)}
+
+.card{border-radius:26px;padding:16px;margin-bottom:14px;min-width:0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row > *{min-width:0}
+.lbl{display:block;font-size:13px;color:var(--muted);margin:0 0 6px 6px}
+input,select,textarea{font:inherit;font-size:16px;color:var(--fg);background:var(--well);border:1px solid rgba(255,255,255,.7);border-radius:14px;padding:11px 12px;width:100%;min-width:0;
+  box-shadow:inset 0 1px 3px rgba(20,30,50,.12), inset 0 -1px 0 rgba(255,255,255,.8);
+  transition:box-shadow .3s var(--spring), background .2s, transform .35s var(--spring)}
+input::placeholder,textarea::placeholder{color:rgba(60,70,90,.35)}
+input:focus,select:focus,textarea:focus{outline:none;background:rgba(255,255,255,.85);box-shadow:inset 0 1px 2px rgba(20,30,50,.08), 0 0 0 3px rgba(47,123,245,.35), 0 6px 16px -8px rgba(47,123,245,.5);transform:scale(1.03)}
+button:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.txt{font-weight:500}
+.meta-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.meta-row > *{min-width:0}
+
+.ex-top{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.ex-idx{font-size:12px;font-weight:600;color:var(--accent-text);margin-right:auto;font-variant-numeric:tabular-nums}
+.ex-name{font:600 20px/1.25 var(--f-display);letter-spacing:-.01em;padding:2px 2px 9px;background:transparent;border:0;border-bottom:1px solid var(--line2);border-radius:0;margin-bottom:12px;box-shadow:none}
+.ex-name{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;color:var(--fg)}
+.ex-name .nm{min-width:0;overflow-wrap:anywhere}
+.ex-name .chev{flex:0 0 auto;font-size:12px;font-weight:600;color:var(--accent-text);background:var(--accent-soft);border-radius:999px;padding:5px 10px;box-shadow:inset 0 1px 1px rgba(255,255,255,.8)}
+.note{margin-bottom:12px;font-size:14px;padding:10px 12px}
+
+.sets-head,.set,.drop-row{display:grid;grid-template-columns:28px minmax(0,1fr) minmax(0,1fr) 76px 32px;gap:6px;align-items:center}
+.sets-head{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+.sets-head span:nth-child(2),.sets-head span:nth-child(3),.sets-head span:nth-child(4){text-align:center}
+.set{margin-bottom:7px}
+.set input,.drop-row input{text-align:center;font-variant-numeric:tabular-nums;font-weight:600;padding:10px 4px}
+.set select{font-size:13px;font-weight:600;padding:10px 4px;text-align:center;text-align-last:center;-webkit-appearance:none;appearance:none;color:var(--muted);border-radius:999px}
+.num{font-size:14px;font-weight:600;text-align:center;color:var(--muted);font-variant-numeric:tabular-nums}
+.set.drop .num{color:var(--drop)}
+.set.drop select{color:#fff;background:linear-gradient(180deg,#FFAD33,#F08A00);border-color:rgba(255,255,255,.6);box-shadow:inset 0 1px 1px rgba(255,255,255,.6), 0 6px 14px -6px rgba(240,138,0,.7)}
+.drops{display:grid;gap:6px;margin:0 0 9px;padding:7px 0;border-radius:18px;background:linear-gradient(160deg,rgba(255,170,40,.18),rgba(255,170,40,.06));border:1px solid rgba(255,255,255,.7);box-shadow:inset 0 1px 1px rgba(255,255,255,.9), inset 0 0 0 1px rgba(240,138,0,.18)}
+.drop-row input{background:rgba(255,255,255,.65);font-size:15px;padding:8px 4px}
+.drop-row input:focus{box-shadow:0 0 0 3px rgba(240,138,0,.35)}
+.drop-arrow{color:var(--drop);text-align:center;font-weight:700}
+.drop-lbl{font-size:11px;font-weight:700;color:var(--drop);text-align:center;line-height:1.15}
+.drop-add{display:grid;grid-template-columns:28px minmax(0,1fr) 32px;gap:6px}
+.add-drop{grid-column:2;background:rgba(255,255,255,.55);color:var(--drop);border:1px solid rgba(255,255,255,.8);border-radius:999px;padding:8px;font:600 13px/1 var(--f-body);box-shadow:var(--rim)}
+
+button{font:inherit;cursor:pointer}
+.btn{background:linear-gradient(180deg,#4B8EFF,#2A6FEA);color:var(--accent-ink);border:1px solid rgba(255,255,255,.5);border-radius:999px;padding:16px;font:600 17px/1 var(--f-body);width:100%;
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.6), inset 0 -2px 4px rgba(10,40,120,.25), 0 12px 26px -10px rgba(47,123,245,.75)}
+.ghost{background:rgba(255,255,255,.5);color:var(--accent-text);border:1px solid rgba(255,255,255,.8);border-radius:999px;padding:12px;font:600 15px/1 var(--f-body);width:100%;margin-top:4px;box-shadow:var(--rim), 0 4px 12px -6px rgba(25,40,70,.2)}
+.ghost.alt{color:var(--fg)}
+.icon{background:linear-gradient(170deg,rgba(255,255,255,.9),rgba(255,255,255,.45));border:1px solid rgba(255,255,255,.85);color:var(--fg);border-radius:50%;width:32px;height:32px;font-size:15px;font-weight:600;flex:0 0 auto;display:inline-grid;place-items:center;padding:0;
+  box-shadow:inset 0 1px 1px #fff, inset 0 -2px 3px rgba(20,30,50,.08), 0 4px 10px -4px rgba(25,40,70,.3)}
+.icon:disabled{opacity:.35;cursor:default;box-shadow:none}
+.ex-top .icon.rm,.drop-row .icon{color:var(--bad)}
+.drop-row .icon{color:var(--drop)}
+.ex-actions{display:flex;gap:8px;margin-top:6px}
+.ex-actions .ghost{margin-top:0;flex:1 1 0;min-width:0}
+#last-all{margin-top:12px}
+
+.empty{text-align:center;padding:30px 14px;border-radius:26px;color:var(--muted)}
+.status{font-size:13px;color:var(--muted);min-height:18px;margin:10px 6px 0}
+.status.err{color:var(--drop)}
+
+details.session{border-radius:24px;margin-bottom:12px;overflow:hidden}
+details.session > summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+details.session > summary::-webkit-details-marker{display:none}
+details.session > summary > div{min-width:0}
+.badge{font-size:12px;font-weight:600;border-radius:999px;padding:5px 11px;white-space:nowrap;background:rgba(255,255,255,.6);box-shadow:inset 0 1px 1px #fff}
+.badge.Push{color:#fff;background:linear-gradient(180deg,#4B8EFF,#2A6FEA)}
+.badge.Pull{color:#fff;background:linear-gradient(180deg,#A877FF,#8A4FF0)}
+.body{padding:0 16px 14px;border-top:1px solid var(--line)}
+.hx{padding:12px 0;border-bottom:1px solid var(--line)}
+.hx:last-of-type{border-bottom:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font-variant-numeric:tabular-nums;font-size:13px;font-weight:500;background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.8);border-radius:999px;padding:5px 10px;box-shadow:inset 0 1px 1px #fff}
+.chip.drop{color:#9A5400;background:var(--drop-soft)}
+.danger{color:var(--bad);border:1px solid rgba(255,255,255,.8);background:rgba(226,54,44,.1);border-radius:999px;padding:9px 16px;margin-top:12px;font-weight:600;font-size:14px}
+
+.backup{margin-top:20px}
+.backup .row > *{flex:1 1 140px}
+.backup textarea{font:13px/1.4 var(--f-mono);min-height:90px;margin-top:10px}
+
+.p-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.p-tile{border-radius:22px;padding:12px 14px}
+.p-tile b{display:block;font:700 32px/1 var(--f-display);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.p-tile span{font-size:12px;font-weight:500;color:var(--muted)}
+.p-tile.up b{color:var(--good)} .p-tile.down b{color:var(--bad)}
+.p-group{font-size:13px;font-weight:600;color:var(--muted);margin:20px 6px 8px}
+details.p-ex{border-radius:22px;margin-bottom:10px}
+details.p-ex > summary{list-style:none;cursor:pointer;padding:12px 14px;display:grid;grid-template-columns:1fr 84px auto;gap:10px;align-items:center}
+details.p-ex > summary::-webkit-details-marker{display:none}
+.p-name{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.p-sub{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.spark{width:84px;height:30px;display:block;color:var(--accent-text)}
+.trend{font-size:12px;font-weight:600;border-radius:999px;padding:5px 9px;white-space:nowrap;font-variant-numeric:tabular-nums;background:rgba(255,255,255,.6);color:var(--muted);box-shadow:inset 0 1px 1px #fff}
+.trend.up{color:#fff;background:linear-gradient(180deg,#3DD26C,#1FAA50)}
+.trend.down{color:#fff;background:linear-gradient(180deg,#FF5E55,#E2362C)}
+.p-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.p-table th{font-weight:600;color:var(--muted);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px 4px;border-bottom:1px solid var(--line2)}
+.p-table td{padding:7px 4px;border-bottom:1px solid var(--line)}
+.p-wrap{padding:0 14px 12px;overflow-x:auto}
+.vol svg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+
+/* Auswahl-Fenster */
+.sheet-bg{position:fixed;inset:0;z-index:50;background:rgba(30,40,60,.18);display:flex;align-items:flex-end;justify-content:center;animation:fade .2s ease}
+.sheet{width:100%;max-width:640px;max-height:82vh;overflow-y:auto;overscroll-behavior:contain;
+  background:linear-gradient(160deg,rgba(255,255,255,.9),rgba(245,247,250,.82));
+  border-bottom:0;border-radius:30px 30px 0 0;
+  padding-block:0 calc(18px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px));
+  animation:up .5s var(--spring)}
+@keyframes up{from{transform:translateY(60px) scale(.98);opacity:.3}}
+@keyframes fade{from{opacity:0}}
+.sheet-top{position:sticky;top:0;z-index:2;padding:8px 0 10px;background:linear-gradient(rgba(250,251,253,.97) 80%,rgba(250,251,253,0))}
+.sheet-grab{width:38px;height:5px;border-radius:3px;background:rgba(20,30,50,.18);margin:0 auto 10px}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.p-cat{font-size:13px;font-weight:600;color:var(--muted);margin:14px 6px 4px}
+.pick{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--fg);padding:13px 6px;font-size:16px;border-radius:12px}
+.pick .nm{min-width:0;overflow-wrap:anywhere}
+.pick .tag{flex:0 0 auto;font-size:12px;color:var(--muted)}
+.pick.cur{color:var(--accent-text);font-weight:600}
+.new-box{background:var(--accent-soft);border:1px solid rgba(255,255,255,.8);border-radius:20px;padding:12px;margin-top:4px;box-shadow:inset 0 1px 1px #fff}
+.new-box .nm{display:block;font-weight:600;color:var(--accent-text);margin:0 2px 10px;overflow-wrap:anywhere}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg button{border:1px solid rgba(255,255,255,.85);border-radius:999px;padding:11px 4px;font:600 15px/1 var(--f-body);background:rgba(255,255,255,.7);color:var(--fg);box-shadow:var(--rim)}
+.seg button.def{color:#fff;background:linear-gradient(180deg,#4B8EFF,#2A6FEA);box-shadow:inset 0 1px 1px rgba(255,255,255,.6), 0 8px 18px -8px rgba(47,123,245,.8)}
+.pick-none{color:var(--muted);font-size:14px;padding:14px 6px}
+
+/* Druck-Animation: Gel-Wackeln + Lichtreflex an der Fingerposition */
+button,.tab{position:relative;-webkit-user-select:none;user-select:none}
+button::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;
+  background:radial-gradient(circle at var(--px,50%) var(--py,50%), rgba(255,255,255,.95), rgba(255,255,255,.35) 25%, rgba(255,255,255,0) 60%)}
+.press{animation:jelly .6s var(--spring)}
+.btn.press,.ghost.press,.ex-name.press,.pick.press,.add-drop.press,.danger.press{animation-name:jelly-soft}
+.press::after{animation:shine .7s ease-out}
+@keyframes jelly{0%{transform:scale(1)}22%{transform:scale(1.18,1.1)}48%{transform:scale(.93,.97)}72%{transform:scale(1.04,1.02)}100%{transform:scale(1)}}
+@keyframes jelly-soft{0%{transform:scale(1)}25%{transform:scale(1.035,1.06)}55%{transform:scale(.985,.975)}100%{transform:scale(1)}}
+@keyframes shine{0%{opacity:1}100%{opacity:0}}
+.pop-in{animation:popin .55s var(--spring)}
+@keyframes popin{from{transform:scale(.92);opacity:0}}
+
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+input[type=date]{min-height:44px;-webkit-appearance:none;appearance:none;text-align:left}
+input[type=date]::-webkit-date-and-time-value{text-align:left}
+
+/* ===== Mehr Liquid ===== */
+:root{
+  --glass:linear-gradient(155deg,rgba(255,255,255,.52),rgba(255,255,255,.12) 55%,rgba(255,255,255,.3));
+  --blur:blur(14px) saturate(220%) brightness(1.04);
+  --rim:inset 0 0 0 1px rgba(255,255,255,.5), inset 1.5px 1.5px 0 -.5px rgba(255,255,255,.95), inset -1px -1px 0 -.5px rgba(255,255,255,.65), inset 0 14px 22px -16px rgba(255,255,255,.95), inset 0 -12px 22px -16px rgba(255,255,255,.8), inset 0 -2px 6px -2px rgba(20,30,50,.08);
+  --drop-btn:radial-gradient(130% 100% at 30% 0%, rgba(255,255,255,.98), rgba(255,255,255,.55) 42%, rgba(255,255,255,.2) 72%, rgba(255,255,255,.5));
+  --drop-shadow:inset 0 0 0 1px rgba(255,255,255,.6), inset 0 -6px 10px -6px rgba(255,255,255,.95), inset 0 3px 4px -3px #fff, inset 0 -1px 3px rgba(20,30,50,.1), 0 8px 18px -8px rgba(25,40,70,.35);
+  --shine:radial-gradient(120% 80% at 30% 0%, rgba(255,255,255,.6), rgba(255,255,255,0) 52%);
+}
+.ambient{opacity:1;filter:blur(36px);
+  background:
+    radial-gradient(30% 24% at 12% 16%, rgba(47,123,245,.5), transparent 70%),
+    radial-gradient(26% 22% at 92% 30%, rgba(232,70,150,.38), transparent 70%),
+    radial-gradient(30% 24% at 78% 80%, rgba(52,199,89,.38), transparent 70%),
+    radial-gradient(26% 22% at 18% 84%, rgba(255,170,40,.38), transparent 70%),
+    radial-gradient(22% 18% at 55% 52%, rgba(150,90,245,.22), transparent 70%)}
+.card,.tabs,details.session,details.p-ex,.p-tile,.pill,.empty{position:relative;border-color:rgba(255,255,255,.55);box-shadow:var(--rim), var(--lift)}
+.card,details.session,details.p-ex,.p-tile{background:radial-gradient(240px circle at var(--mx,25%) var(--my,-40px), rgba(255,255,255,.6), rgba(255,255,255,0) 70%), var(--glass)}
+/* Regenbogen-Kante wie gebrochenes Licht */
+.card::before,details.session::before,details.p-ex::before,.p-tile::before,.tabs::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;z-index:0;
+  background:conic-gradient(from 210deg, rgba(255,255,255,.95), rgba(110,165,255,.6), rgba(255,255,255,.25), rgba(255,130,200,.5), rgba(255,255,255,.95), rgba(255,205,110,.5), rgba(120,225,165,.5), rgba(255,255,255,.95));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.55}
+/* Tropfen-Knöpfe */
+.icon,.ghost,.add-drop,.seg button:not(.def),.chip:not(.drop),.trend:not(.up):not(.down),.badge:not(.Push):not(.Pull),.danger{background:var(--drop-btn);border-color:rgba(255,255,255,.5);box-shadow:var(--drop-shadow)}
+.danger{background:radial-gradient(130% 100% at 30% 0%, rgba(255,255,255,.9), rgba(255,220,218,.5) 45%, rgba(255,120,110,.18))}
+.add-drop{background:radial-gradient(130% 100% at 30% 0%, rgba(255,255,255,.95), rgba(255,236,205,.6) 45%, rgba(255,180,80,.22))}
+.btn{background:var(--shine), linear-gradient(180deg,#4B8EFF,#2A6FEA);box-shadow:inset 0 1px 1px rgba(255,255,255,.7), inset 0 -8px 12px -8px rgba(255,255,255,.55), inset 0 -2px 4px rgba(10,40,120,.25), 0 14px 28px -10px rgba(47,123,245,.8)}
+.seg button.def,.badge.Push{background:var(--shine), linear-gradient(180deg,#4B8EFF,#2A6FEA)}
+.badge.Pull{background:var(--shine), linear-gradient(180deg,#A877FF,#8A4FF0)}
+.trend.up{background:var(--shine), linear-gradient(180deg,#3DD26C,#1FAA50)}
+.trend.down{background:var(--shine), linear-gradient(180deg,#FF5E55,#E2362C)}
+.set.drop select{background:var(--shine), linear-gradient(180deg,#FFAD33,#F08A00);box-shadow:inset 0 1px 1px rgba(255,255,255,.7), inset 0 -6px 10px -6px rgba(255,255,255,.6), 0 8px 16px -6px rgba(240,138,0,.75)}
+.lens{background:radial-gradient(120% 120% at 30% 0%, rgba(255,255,255,1), rgba(255,255,255,.55) 50%, rgba(255,255,255,.35));box-shadow:inset 0 0 0 1px rgba(255,255,255,.9), inset 0 -6px 10px -6px rgba(255,255,255,1), inset 0 -2px 5px rgba(20,30,50,.08), 0 8px 18px -8px rgba(25,40,70,.4)}
+.lens::before{opacity:.85;padding:2px}
+input,select,textarea{background:radial-gradient(140% 120% at 30% 0%, rgba(255,255,255,.75), rgba(255,255,255,.35) 60%);box-shadow:inset 0 1px 3px rgba(20,30,50,.12), inset 0 -4px 8px -6px rgba(255,255,255,.95), inset 0 0 0 1px rgba(255,255,255,.55)}
+.ex-name{background:transparent;box-shadow:none}
+.drop-row input{background:radial-gradient(140% 120% at 30% 0%, rgba(255,255,255,.9), rgba(255,255,255,.5) 60%)}
+.sheet{background:radial-gradient(400px circle at 20% 0%, rgba(255,255,255,.7), rgba(255,255,255,0) 70%), linear-gradient(160deg,rgba(255,255,255,.72),rgba(240,244,250,.6));-webkit-backdrop-filter:blur(26px) saturate(220%);backdrop-filter:blur(26px) saturate(220%);box-shadow:var(--rim), 0 -18px 40px -10px rgba(25,40,70,.25)}
+.sheet-top{background:linear-gradient(rgba(248,250,253,.85) 80%,rgba(248,250,253,0))}
+
+/* Gedrückt halten: Tropfen wächst und hebt ab */
+button{transition:transform .45s var(--spring), box-shadow .3s ease}
+.held{transform:scale(1.16);z-index:3;box-shadow:var(--drop-shadow), 0 18px 30px -10px rgba(25,40,70,.45)}
+.btn.held,.ghost.held,.ex-name.held,.pick.held,.add-drop.held,.danger.held,.seg button.held{transform:scale(1.035,1.08)}
+.tab.held{transform:scale(1.1)}
+.held::after{opacity:.55;transition:opacity .2s}
+/* Loslassen: wabbeln wie Wasser */
+@keyframes jelly{0%{transform:scale(1.16)}22%{transform:scale(.9,1.1)}45%{transform:scale(1.08,.95)}68%{transform:scale(.98,1.03)}100%{transform:scale(1)}}
+@keyframes jelly-soft{0%{transform:scale(1.035,1.08)}25%{transform:scale(1.05,.95)}50%{transform:scale(.99,1.03)}100%{transform:scale(1)}}
+.icon.press{animation-name:blob}
+@keyframes blob{0%{transform:scale(1.16);border-radius:50%}
+  20%{transform:scale(.88,1.14);border-radius:44% 56% 40% 60%/60% 42% 58% 40%}
+  42%{transform:scale(1.1,.92);border-radius:57% 43% 54% 46%/43% 57% 43% 57%}
+  66%{transform:scale(.97,1.04);border-radius:48% 52% 51% 49%/52% 48% 52% 48%}
+  100%{transform:scale(1);border-radius:50%}}
+@keyframes stretch{0%{border-radius:999px}35%{scale:1.22 .84;border-radius:40% 60% 60% 40%/50%}65%{scale:.96 1.06}100%{scale:1 1}}
+
+/* ===== Eigene Liquid-Auswahl statt iOS-Select ===== */
+*{-webkit-tap-highlight-color:transparent}
+.select-btn,.kind-btn{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;color:var(--fg);border:1px solid rgba(255,255,255,.7);
+  background:radial-gradient(140% 120% at 30% 0%, rgba(255,255,255,.75), rgba(255,255,255,.35) 60%);
+  box-shadow:inset 0 1px 3px rgba(20,30,50,.12), inset 0 -4px 8px -6px rgba(255,255,255,.95), inset 0 0 0 1px rgba(255,255,255,.55)}
+.select-btn{border-radius:14px;padding:11px 12px;font:500 16px/1.25 var(--f-body);min-height:46px;text-align:left}
+.select-btn .chev,.kind-btn .chev{flex:0 0 auto;width:16px;height:16px;opacity:.55;transition:transform .45s var(--spring)}
+.select-btn[aria-expanded="true"] .chev,.kind-btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.kind-btn{border-radius:999px;padding:10px 4px;font:600 13px/1 var(--f-body);color:var(--muted);justify-content:center}
+.kind-btn .chev{width:11px;height:11px}
+.set.drop .kind-btn{color:#fff;border-color:rgba(255,255,255,.6);background:var(--shine), linear-gradient(180deg,#FFAD33,#F08A00);box-shadow:inset 0 1px 1px rgba(255,255,255,.7), inset 0 -6px 10px -6px rgba(255,255,255,.6), 0 8px 16px -6px rgba(240,138,0,.75)}
+.kind-btn.press,.select-btn.press{animation-name:jelly-soft}
+.kind-btn.held,.select-btn.held{transform:scale(1.06,1.1)}
+
+.menu-bg{position:fixed;inset:0;z-index:60}
+.menu{position:fixed;z-index:61;min-width:170px;padding:6px;border-radius:22px;isolation:isolate;
+  box-shadow:0 22px 44px -14px rgba(25,40,70,.42), 0 2px 8px rgba(25,40,70,.1);
+  transform-origin:var(--ox,50%) var(--oy,0);animation:menu-in .5s var(--spring)}
+.menu-glass{position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
+  background:radial-gradient(220px circle at 25% 0%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%), linear-gradient(160deg,rgba(255,255,255,.9),rgba(245,248,252,.8));
+  -webkit-backdrop-filter:blur(24px) saturate(220%);backdrop-filter:blur(24px) saturate(220%);
+  border:1px solid rgba(255,255,255,.8);box-shadow:var(--rim)}
+.menu::before{content:"";position:absolute;inset:0;z-index:0;border-radius:inherit;padding:1.5px;pointer-events:none;
+  background:conic-gradient(from 210deg, rgba(255,255,255,.95), rgba(110,165,255,.6), rgba(255,255,255,.25), rgba(255,130,200,.5), rgba(255,255,255,.95), rgba(255,205,110,.5), rgba(120,225,165,.5), rgba(255,255,255,.95));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.6}
+.menu.out{animation:menu-out .22s ease-in forwards}
+@keyframes menu-in{0%{transform:scale(.3,.2);opacity:.001;border-radius:999px}55%{transform:scale(1.04,1.06);opacity:1}78%{transform:scale(.985,.99)}100%{transform:scale(1)}}
+@keyframes menu-out{to{transform:scale(.5,.35);opacity:0;border-radius:999px}}
+.menu-item{position:relative;z-index:1;opacity:1;display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;color:var(--fg);font:500 16px/1 var(--f-body);text-align:left;padding:13px 14px;border-radius:16px;
+  animation:item-in .4s var(--spring) both}
+.menu-item:nth-of-type(2){animation-delay:.04s}.menu-item:nth-of-type(3){animation-delay:.08s}
+@keyframes item-in{from{opacity:.001;transform:translateY(-6px)}}
+.menu-item .ck{width:18px;flex:0 0 18px;color:var(--accent-text);font-weight:700;text-align:center}
+.menu-item .dot{width:10px;height:10px;border-radius:50%;flex:0 0 10px;margin-left:auto;box-shadow:inset 0 1px 1px rgba(255,255,255,.7)}
+.menu-item.sel{font-weight:600}
+.menu-item.held{background:rgba(255,255,255,.7);box-shadow:var(--drop-shadow);transform:scale(1.04)}
+.menu-item::after{display:none}
+
+/* Druck auf Eingabefelder: weiches Wabbeln in ihrer eigenen Form */
+input.press,textarea.press{animation:field .55s var(--spring)}
+@keyframes field{0%{transform:scale(1)}30%{transform:scale(1.07,1.1)}60%{transform:scale(1.01,.99)}100%{transform:scale(1.03)}}
+
+/* ===== Pop-ups im Stil der iOS-Datumsauswahl: dunkel getöntes Glas ===== */
+:root{--pop:rgba(104,106,113,.74);--pop-solid:rgba(104,106,113,.96);--pop-line:rgba(255,255,255,.13);--pop-fill:rgba(255,255,255,.16);--pop-text:#FFFFFF;--pop-muted:rgba(255,255,255,.62)}
+.menu{border-radius:30px;padding:8px;box-shadow:0 24px 60px -12px rgba(0,0,0,.35)}
+.menu::before{display:none}
+.menu-glass{background:var(--pop);-webkit-backdrop-filter:blur(30px) saturate(170%);backdrop-filter:blur(30px) saturate(170%);
+  border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.28), inset 0 0 0 1px rgba(255,255,255,.08)}
+.menu-item{color:var(--pop-text);font:600 17px/1 var(--f-body);padding:15px 16px;border-radius:22px}
+.menu-item .ck{color:var(--pop-text)}
+.menu-item.sel{font-weight:700}
+.menu-item.held{background:var(--pop-fill);box-shadow:none;transform:scale(1.03)}
+.menu-item .dot{box-shadow:0 0 0 2px rgba(255,255,255,.25)}
+
+.sheet-bg{background:rgba(20,25,35,.12)}
+.sheet{color:var(--pop-text);background:rgba(104,106,113,.9);-webkit-backdrop-filter:blur(30px) saturate(170%);backdrop-filter:blur(30px) saturate(170%);
+  border:0;border-radius:34px 34px 0 0;box-shadow:inset 0 1px 0 rgba(255,255,255,.28), 0 -20px 60px -12px rgba(0,0,0,.35)}
+.sheet-top{background:linear-gradient(rgba(104,106,113,.9) 82%, rgba(104,106,113,0))}
+.sheet-grab{background:rgba(255,255,255,.45)}
+.sheet h2{color:var(--pop-text)}
+.sheet .icon{background:var(--pop-fill);color:var(--pop-text);border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.sheet input{color:var(--pop-text);background:var(--pop-fill);border:0;border-radius:999px;padding:12px 16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.15)}
+.sheet input::placeholder{color:var(--pop-muted)}
+.sheet input:focus{background:rgba(255,255,255,.24);box-shadow:inset 0 1px 0 rgba(255,255,255,.2), 0 0 0 2px rgba(255,255,255,.35);transform:none}
+.p-cat{color:var(--pop-muted)}
+.pick{color:var(--pop-text);border-bottom-color:var(--pop-line);font-weight:600;font-size:17px;border-radius:0}
+.pick.held{border-radius:18px}
+.sheet input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none;display:none}
+.pick .tag{color:var(--pop-muted);font-weight:500}
+.pick.cur{color:var(--pop-text);font-weight:800}
+.pick.held{background:var(--pop-fill);transform:scale(1.02)}
+.pick-none{color:var(--pop-muted)}
+.new-box{background:var(--pop-fill);border:0;border-radius:24px;box-shadow:inset 0 1px 0 rgba(255,255,255,.15)}
+.new-box .nm{color:var(--pop-text)}
+.seg button,.seg button:not(.def){background:rgba(255,255,255,.14);color:var(--pop-text);border:1px solid rgba(255,255,255,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.seg button.def{background:rgba(236,233,226,.62);color:#fff;border-color:rgba(255,255,255,.35);box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 6px 16px -8px rgba(0,0,0,.4)}
+.sheet button::after,.menu button::after{background:radial-gradient(circle at var(--px,50%) var(--py,50%), rgba(255,255,255,.45), rgba(255,255,255,0) 60%)}
+
+/* Ändern-Knopf im Pop-up-Stil */
+.ex-name .chev{border:0;cursor:pointer;color:#fff;background:rgba(104,106,113,.74);-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);
+  padding:6px 12px;font-size:13px;font-weight:700;box-shadow:inset 0 1px 0 rgba(255,255,255,.3), 0 6px 14px -8px rgba(0,0,0,.45)}
+/* Nur das Feld selbst öffnet die Auswahl */
+.meta-row .lbl{pointer-events:none;width:max-content;max-width:100%}
+input[type=date]{width:100%;display:block}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="ambient" aria-hidden="true"></div>
+<main>
+<header>
+  <div>
+    <h1>Trainingslog</h1>
+    <div class="kicker">Push · Pull · Fortschritt</div>
+  </div>
+  <span class="pill" id="net">Online</span>
+</header>
+
+<div class="tabs" role="tablist">
+  <span class="lens" id="lens" aria-hidden="true"></span>
+  <button class="tab" role="tab" id="tab-new" aria-controls="view-new" aria-selected="true">Eintragen</button>
+  <button class="tab" role="tab" id="tab-hist" aria-controls="view-hist" aria-selected="false">Verlauf</button>
+  <button class="tab" role="tab" id="tab-prog" aria-controls="view-prog" aria-selected="false">Fortschritt</button>
+</div>
+
+<!-- NEW SESSION -->
+<section id="view-new" role="tabpanel" aria-labelledby="tab-new">
+  <div class="card">
+    <div class="meta-row">
+      <div>
+        <span class="lbl" id="l-date">Datum</span>
+        <input type="date" id="s-date" aria-labelledby="l-date">
+      </div>
+      <div>
+        <span class="lbl" id="l-type">Trainingstag</span>
+        <button class="select-btn" id="s-type" type="button" aria-labelledby="l-type s-type" aria-haspopup="menu" aria-expanded="false"><span id="s-type-label">Push</span></button>
+      </div>
+    </div>
+    <button class="ghost alt" id="last-all" type="button" hidden>↺ Alle Werte vom letzten Mal</button>
+  </div>
+
+  <div id="editor"></div>
+
+  <button class="ghost" id="add-ex" type="button">+ Übung hinzufügen</button>
+  <div style="height:12px"></div>
+  <button class="btn" id="save" type="button">Session speichern</button>
+  <p class="status" id="status" role="status" aria-live="polite"></p>
+</section>
+
+<!-- HISTORY -->
+<section id="view-hist" role="tabpanel" aria-labelledby="tab-hist" hidden>
+  <div id="history"></div>
+  <div class="card backup">
+    <h2>Sicherung</h2>
+    <p class="muted small">Deine Daten liegen nur auf diesem Gerät. Sichere sie ab und zu, z. B. in Notizen oder als Datei.</p>
+    <div class="row">
+      <button class="ghost" id="exp" type="button">Exportieren</button>
+      <button class="ghost" id="imp-btn" type="button">Importieren</button>
+    </div>
+    <input type="file" id="imp-file" accept="application/json,.json,.txt" hidden>
+    <textarea id="imp-text" placeholder="Oder Sicherungstext hier einfügen und auf „Text übernehmen“ tippen" aria-label="Sicherungstext"></textarea>
+    <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
+    <p class="status" id="bstatus" role="status" aria-live="polite"></p>
+  </div>
+</section>
+
+<!-- PROGRESS -->
+<section id="view-prog" role="tabpanel" aria-labelledby="tab-prog" hidden>
+  <div id="progress"></div>
+</section>
+
+</main>
+<div class="sheet-bg" id="sheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-top">
+      <div class="sheet-grab" aria-hidden="true"></div>
+      <div class="sheet-head"><h2 id="sheet-title">Übung wählen</h2><button class="icon" id="sheet-close" type="button" aria-label="Schließen">✕</button></div>
+      <input id="sheet-search" type="search" placeholder="Suchen oder neue Übung eingeben" autocomplete="off" enterkeyhint="done" aria-label="Übung suchen">
+    </div>
+    <div id="sheet-list"></div>
+  </div>
+</div>
+<script>
+(function(){
+  const KEY = 'trainingslog-v1';
+  const $ = (s, r=document) => r.querySelector(s);
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const today = () => { const d = new Date(); const z = new Date(d.getTime()-d.getTimezoneOffset()*60000); return z.toISOString().slice(0,10); };
+  const fmtDate = iso => new Date(iso+'T00:00').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
+  const fmtKg = n => (n==null||n==='') ? '–' : String(n).replace('.',',');
+
+  // ---- storage (per browser; wrapped because storage can be unavailable) ----
+  let data = { sessions: [], draft: null };
+  let storageOk = true;
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) data = Object.assign(data, JSON.parse(raw));
+  } catch(e){ storageOk = false; }
+  function persist(){
+    try { localStorage.setItem(KEY, JSON.stringify(data)); return true; }
+    catch(e){ storageOk = false; return false; }
+  }
+  const TEMPLATES = {
+    Push: [
+      'Brustdrücken an der Maschine',
+      'Schrägbankdrücken mit Kurzhanteln (frei)',
+      'Butterflys',
+      'Schulterdrücken mit Kurzhanteln (frei)',
+      'Seitheben an der Maschine',
+      'Trizeps am Kabelturm unilateral',
+      'Trizeps am Kabelturm über Kopf'
+    ],
+    Pull: [
+      'Latziehen',
+      'T-Zug',
+      'Rudern',
+      'Reverse Butterfly',
+      'Rückenstrecker',
+      'Bizeps an der Bizepsmaschine',
+      'Bizeps am Kabelturm unilateral'
+    ]
+  };
+  function lastNote(name){
+    for (let k = data.sessions.length - 1; k >= 0; k--){
+      const e = data.sessions[k].exercises.find(x => x.name === name);
+      if (e && e.note) return e.note;
+    }
+    return '';
+  }
+  function fromTemplate(type){
+    return (TEMPLATES[type] || []).map(n => ({ name: n, note: lastNote(n), sets: [{reps:'',kg:''},{reps:'',kg:''},{reps:'',kg:''}] }));
+  }
+  function untouched(d){
+    return d.exercises.every(e => e.sets.every(s => s.reps === '' && s.kg === '' && s.kind !== 'drop'));
+  }
+  // Last logged values for the same exercise and set, shown as placeholder.
+  function lastSet(name, j){
+    for (let k = data.sessions.length - 1; k >= 0; k--){
+      const e = data.sessions[k].exercises.find(x => x.name === name);
+      if (e) return e.sets[j] || null;
+    }
+    return null;
+  }
+  const dropsOf = x => Array.isArray(x.drops) ? x.drops : (x.drop ? [x.drop] : []);
+  // Letzte gespeicherte Ausführung einer Übung (nach Datum)
+  function lastEx(name){
+    const n = (name || '').trim(); if (!n) return null;
+    const list = [...data.sessions].sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id));
+    for (let k = list.length - 1; k >= 0; k--){
+      const e = list[k].exercises.find(x => x.name === n);
+      if (e) return { ex: e, date: list[k].date };
+    }
+    return null;
+  }
+  // Füllt nur leere Felder, bereits Eingetragenes bleibt stehen
+  function applyLast(ex){
+    const hit = lastEx(ex.name); if (!hit) return null;
+    const L = hit.ex;
+    while (ex.sets.length < L.sets.length) ex.sets.push({ reps:'', kg:'' });
+    L.sets.forEach((ls, j) => {
+      const s = ex.sets[j];
+      if (s.reps === '' || s.reps == null) s.reps = ls.reps ?? '';
+      if (s.kg === '' || s.kg == null) s.kg = ls.kg ?? '';
+      if (ls.kind === 'drop' && s.kind !== 'drop'){ s.kind = 'drop'; s.drops = dropsOf(ls).map(d => ({ reps: d.reps ?? '', kg: d.kg ?? '' })); }
+    });
+    if (!ex.note && L.note) ex.note = L.note;
+    return hit.date;
+  }
+  const shortDate = iso => new Date(iso + 'T00:00').toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit' });
+  function fitName(t){ t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
+  function newDraft(){
+    return { date: today(), type: 'Push', exercises: fromTemplate('Push') };
+  }
+  if (!data.draft) data.draft = newDraft();
+  if (!Array.isArray(data.sessions)) data.sessions = [];
+  if (!data.draft.exercises.length) data.draft.exercises = fromTemplate(data.draft.type);
+  data.draft.exercises.forEach(e => e.sets.forEach(x => {
+    if (x.kind === 'drop' && !Array.isArray(x.drops)) x.drops = [{ reps: x.dropReps ?? '', kg: x.dropKg ?? '' }];
+    delete x.dropReps; delete x.dropKg;
+  }));
+
+  // ---- status line ----
+  function say(msg, isErr){
+    const el = $('#status');
+    el.textContent = msg;
+    el.classList.toggle('err', !!isErr);
+  }
+
+
+  // ---- Liquid-Glass-Interaktionen ----
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let heldEl = null;
+  document.addEventListener('pointerdown', e => {
+    const el = e.target.closest('button');
+    if (!el || el.disabled || reduce) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--px', (e.clientX - r.left) + 'px');
+    el.style.setProperty('--py', (e.clientY - r.top) + 'px');
+    el.classList.remove('press'); el.classList.add('held'); heldEl = el;
+  }, { passive:true });
+  function release(){
+    if (!heldEl) return;
+    const el = heldEl; heldEl = null;
+    el.classList.remove('held'); void el.offsetWidth; el.classList.add('press');
+  }
+  ['pointerup','pointercancel'].forEach(t => document.addEventListener(t, release, { passive:true }));
+  // Lichtreflex: folgt dem Finger und wandert beim Scrollen über das Glas
+  const glassSel = '.card,details.session,details.p-ex,.p-tile';
+  document.addEventListener('pointermove', e => {
+    const c = e.target.closest && e.target.closest(glassSel); if (!c) return;
+    const r = c.getBoundingClientRect();
+    c.style.setProperty('--mx', (e.clientX - r.left) + 'px'); c.style.setProperty('--my', (e.clientY - r.top) + 'px');
+  }, { passive:true });
+  let sheenQueued = false;
+  function sheen(){
+    sheenQueued = false;
+    const h = innerHeight;
+    document.querySelectorAll(glassSel).forEach(c => {
+      const r = c.getBoundingClientRect(); if (r.bottom < 0 || r.top > h) return;
+      const t = Math.max(0, Math.min(1, (r.top + r.height / 2) / h));
+      c.style.setProperty('--mx', (15 + t * 70) + '%');
+      c.style.setProperty('--my', (h * 0.18 - r.top) + 'px');
+    });
+  }
+  if (!reduce){ addEventListener('scroll', () => { if (!sheenQueued){ sheenQueued = true; requestAnimationFrame(sheen); } }, { passive:true }); setTimeout(sheen, 50); }
+  document.addEventListener('animationend', e => {
+    if (e.animationName === 'jelly' || e.animationName === 'jelly-soft') e.target.classList.remove('press');
+    if (e.animationName === 'popin') e.target.classList.remove('pop-in');
+  });
+  function moveLens(which){
+    const idx = ['new','hist','prog'].indexOf(which), lens = $('#lens');
+    if (!lens || idx < 0) return;
+    const prev = lens.dataset.idx;
+    lens.style.transform = `translateX(${idx * 100}%)`;
+    if (prev != null && +prev !== idx && !reduce){ lens.classList.remove('moving'); void lens.offsetWidth; lens.classList.add('moving'); }
+    lens.dataset.idx = idx;
+  }
+  $('#lens').addEventListener('animationend', e => e.currentTarget.classList.remove('moving'));
+
+
+  // ---- Liquid-Menü (ersetzt die iOS-Auswahl) ----
+  const CHEV = '<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  let menuState = null;
+  function openMenu(anchor, options, current, onPick){
+    closeMenu(true);
+    const bg = document.createElement('div'); bg.className = 'menu-bg';
+    const m = document.createElement('div'); m.className = 'menu'; m.setAttribute('role','menu');
+    m.innerHTML = '<span class="menu-glass" aria-hidden="true"></span>' + options.map(o => `<button type="button" class="menu-item${o.value === current ? ' sel' : ''}" role="menuitemradio" aria-checked="${o.value === current}" data-v="${esc(o.value)}"><span class="ck">${o.value === current ? '✓' : ''}</span>${esc(o.label)}${o.color ? `<span class="dot" style="background:${o.color}"></span>` : ''}</button>`).join('');
+    document.body.append(bg, m);
+    const a = anchor.getBoundingClientRect(), mw = Math.max(m.offsetWidth, a.width), mh = m.offsetHeight, pad = 12;
+    m.style.minWidth = mw + 'px';
+    let left = Math.min(Math.max(pad, a.right - mw), innerWidth - mw - pad);
+    let top = a.bottom + 8; if (top + mh > innerHeight - pad) top = Math.max(pad, a.top - mh - 8);
+    m.style.left = left + 'px'; m.style.top = top + 'px';
+    m.style.setProperty('--ox', (a.left + a.width / 2 - left) + 'px');
+    m.style.setProperty('--oy', (top > a.top ? 0 : mh) + 'px');
+    anchor.setAttribute('aria-expanded', 'true');
+    menuState = { bg, m, anchor };
+    bg.addEventListener('pointerdown', () => closeMenu());
+    m.addEventListener('click', e => { const it = e.target.closest('.menu-item'); if (!it) return; const v = it.dataset.v; closeMenu(); onPick(v); });
+    if (matchMedia('(hover: hover)').matches){ const first = m.querySelector('.sel') || m.querySelector('.menu-item'); if (first) first.focus({ preventScroll:true }); }
+  }
+  function closeMenu(instant){
+    if (!menuState) return;
+    const { bg, m, anchor } = menuState; menuState = null;
+    if (anchor && anchor.isConnected) anchor.setAttribute('aria-expanded', 'false');
+    bg.remove();
+    if (instant || reduce) { m.remove(); return; }
+    m.classList.add('out'); m.addEventListener('animationend', () => m.remove(), { once:true }); setTimeout(() => m.remove(), 400);
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && menuState) closeMenu(); });
+  addEventListener('resize', () => closeMenu(true));
+  const TYPE_OPTS = [{value:'Push',label:'Push',color:'#2F7BF5'},{value:'Pull',label:'Pull',color:'#9358F2'},{value:'Sonstiges',label:'Sonstiges',color:'#9AA3B2'}];
+  const KIND_OPTS = [{value:'',label:'Normal'},{value:'drop',label:'Dropsatz',color:'#F08A00'}];
+  function setType(v){
+    data.draft.type = v;
+    if (untouched(data.draft)) data.draft.exercises = fromTemplate(v);
+    saveDraft(); renderMeta(); renderEditor();
+  }
+  $('#s-type').addEventListener('click', e => openMenu(e.currentTarget, TYPE_OPTS, data.draft.type, setType));
+  function setKind(i, j, v){
+    const set = data.draft.exercises[i].sets[j];
+    set.kind = v;
+    if (v === 'drop' && !(set.drops && set.drops.length)) set.drops = [{ reps:'', kg:'' }];
+    saveDraft(); renderEditor();
+    const first = v === 'drop' && document.querySelector(`.ex[data-i="${i}"] [data-f="dropReps"][data-j="${j}"]`);
+    if (first) first.focus();
+  }
+  // Eingabefelder wabbeln beim Antippen
+  document.addEventListener('pointerdown', e => {
+    const f = e.target.closest('input:not([type=date]),textarea'); if (!f || reduce) return;
+    f.classList.remove('press'); void f.offsetWidth; f.classList.add('press');
+  }, { passive:true });
+  document.addEventListener('animationend', e => { if (e.animationName === 'field') e.target.classList.remove('press'); });
+
+  // ---- tabs ----
+  function showTab(which){
+    ['new','hist','prog'].forEach(t => {
+      $('#tab-' + t).setAttribute('aria-selected', t === which);
+      $('#view-' + t).hidden = t !== which;
+    });
+    moveLens(which);
+    const view = $('#view-' + which); if (view && !reduce){ view.classList.remove('pop-in'); void view.offsetWidth; view.classList.add('pop-in'); }
+    if (which === 'hist') renderHistory();
+    if (which === 'prog') renderProgress();
+    if (typeof sheen === 'function' && !reduce) requestAnimationFrame(sheen);
+  }
+  ['new','hist','prog'].forEach(t => $('#tab-' + t).addEventListener('click', () => showTab(t)));
+
+  // ---- editor ----
+  function renderMeta(){
+    $('#s-date').value = data.draft.date;
+    $('#s-type').innerHTML = `<span>${esc(data.draft.type)}</span>${CHEV}`;
+  }
+  function renderEditor(){
+    const ex = data.draft.exercises;
+    if (!ex.length){
+      $('#editor').innerHTML = `<div class="empty">Noch keine Übungen in dieser Session.<br>Tippe unten auf „Übung hinzufügen“.</div>`;
+      return;
+    }
+    $('#editor').innerHTML = ex.map((e, i) => `
+      <section class="card ex" data-i="${i}">
+        <div class="ex-top">
+          <span class="ex-idx">Übung ${i+1} von ${ex.length}</span>
+          <button class="icon" type="button" data-act="up" ${i===0?'disabled':''} aria-label="Übung nach oben">↑</button>
+          <button class="icon" type="button" data-act="down" ${i===ex.length-1?'disabled':''} aria-label="Übung nach unten">↓</button>
+          <button class="icon rm" type="button" data-act="rm-ex" aria-label="Übung entfernen">✕</button>
+        </div>
+        <div class="ex-name"><span class="nm">${esc(e.name) || 'Übung wählen'}</span><button class="chev" type="button" data-act="pick" aria-label="Übung ${i+1} ändern: ${esc(e.name || 'keine gewählt')}">Ändern</button></div>
+        <input class="txt note" data-f="note" placeholder="Maschineneinstellung, z. B. Sitz Stufe 4" value="${esc(e.note)}" aria-label="Maschineneinstellung">
+        <div class="sets-head" title="Graue Zahlen zeigen die Werte vom letzten Mal"><span>#</span><span>Wdh</span><span>kg</span><span>Art</span><span></span></div>
+        ${e.sets.map((s, j) => { const L = lastSet(e.name, j); return `
+          <div class="set${s.kind==='drop'?' drop':''}">
+            <span class="num">${j+1}</span>
+            <input type="number" inputmode="numeric" min="0" step="1" data-f="reps" data-j="${j}" value="${esc(s.reps)}" placeholder="${L && L.reps != null ? L.reps : ''}" aria-label="Wiederholungen, Satz ${j+1}">
+            <input type="number" inputmode="decimal" min="0" step="0.5" data-f="kg" data-j="${j}" value="${esc(s.kg)}" placeholder="${L && L.kg != null ? fmtKg(L.kg) : ''}" aria-label="Gewicht in kg, Satz ${j+1}">
+            <button class="kind-btn" type="button" data-act="kind" data-j="${j}" aria-haspopup="menu" aria-expanded="false" aria-label="Satzart, Satz ${j+1}: ${s.kind==='drop'?'Drop':'Normal'}">${s.kind==='drop'?'Drop':'Normal'}${CHEV}</button>
+            <button class="icon" type="button" data-act="rm-set" data-j="${j}" aria-label="Satz ${j+1} entfernen">−</button>
+          </div>
+          ${s.kind==='drop' ? `<div class="drops">
+            ${(s.drops||[]).map((d, k) => { const LD = L ? dropsOf(L)[k] : null; return `
+            <div class="drop-row">
+              <span class="drop-arrow" aria-hidden="true">↳</span>
+              <input type="number" inputmode="numeric" min="0" step="1" data-f="dropReps" data-j="${j}" data-k="${k}" value="${esc(d.reps)}" placeholder="${LD && LD.reps != null ? LD.reps : 'Wdh'}" aria-label="Wiederholungen nach Drop ${k+1}, Satz ${j+1}">
+              <input type="number" inputmode="decimal" min="0" step="0.5" data-f="dropKg" data-j="${j}" data-k="${k}" value="${esc(d.kg)}" placeholder="${LD && LD.kg != null ? fmtKg(LD.kg) : 'kg'}" aria-label="Gewicht nach Drop ${k+1} in kg, Satz ${j+1}">
+              <span class="drop-lbl">Drop ${k+1}</span>
+              <button class="icon" type="button" data-act="rm-drop" data-j="${j}" data-k="${k}" aria-label="Drop ${k+1} entfernen">−</button>
+            </div>`; }).join('')}
+            <div class="drop-add"><button class="add-drop" type="button" data-act="add-drop" data-j="${j}">+ Drop</button></div>
+          </div>` : ''}`; }).join('')}
+        <div class="ex-actions">
+          ${lastEx(e.name) ? `<button class="ghost alt" type="button" data-act="last">↺ Letzte Werte</button>` : ''}
+          <button class="ghost" type="button" data-act="add-set">+ Satz</button>
+        </div>
+      </section>`).join('');
+    $('#last-all').hidden = !data.draft.exercises.some(e => lastEx(e.name));
+  }
+  function saveDraft(){ persist(); }
+
+  // Input changes update state without re-rendering, so focus is kept.
+  $('#editor').addEventListener('input', e => {
+    const card = e.target.closest('.ex');
+    if (!card) return;
+    const ex = data.draft.exercises[+card.dataset.i];
+    const f = e.target.dataset.f;
+    if (f === 'name' || f === 'note') { ex[f] = e.target.value; if (f === 'name') fitName(e.target); }
+    else if (f === 'dropReps' || f === 'dropKg') {
+      const set = ex.sets[+e.target.dataset.j];
+      set.drops[+e.target.dataset.k][f === 'dropReps' ? 'reps' : 'kg'] = e.target.value;
+    }
+    else {
+      const j = +e.target.dataset.j;
+      const v = e.target.value;
+      ex.sets[j][f] = v === '' ? '' : v;
+      if (f === 'kind'){
+        const set = ex.sets[j];
+        if (v === 'drop' && !(set.drops && set.drops.length)) set.drops = [{ reps:'', kg:'' }];
+        saveDraft(); renderEditor();
+        const c = document.querySelector(`.ex[data-i="${card.dataset.i}"]`);
+        const first = v === 'drop' && c && c.querySelector(`[data-f="dropReps"][data-j="${j}"]`);
+        if (first) first.focus();
+        return;
+      }
+    }
+    saveDraft();
+  });
+
+  $('#editor').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.classList.contains('ex-name')) { e.preventDefault(); e.target.blur(); }
+  });
+  $('#editor').addEventListener('click', e => {
+    const btn = e.target.closest('[data-act]');
+    if (!btn) return;
+    const card = btn.closest('.ex');
+    const i = card ? +card.dataset.i : -1;
+    const act = btn.dataset.act;
+    if (act === 'pick'){ openPicker(i); return; }
+    if (act === 'kind'){ const j = +btn.dataset.j; openMenu(btn, KIND_OPTS, data.draft.exercises[i].sets[j].kind || '', v => setKind(i, j, v)); return; }
+    if (act === 'rm-ex'){ data.draft.exercises.splice(i,1); }
+    if (act === 'last'){
+      const ex = data.draft.exercises[i], d = applyLast(ex);
+      saveDraft(); renderEditor();
+      say(d ? `${ex.name}: Werte vom ${shortDate(d)} übernommen.` : 'Für diese Übung gibt es noch keine gespeicherten Werte.', !d);
+      return;
+    }
+    if (act === 'add-drop' || act === 'rm-drop'){
+      const j = +btn.dataset.j, set = data.draft.exercises[i].sets[j];
+      set.drops = set.drops || [];
+      if (act === 'add-drop') set.drops.push({ reps:'', kg:'' });
+      else { set.drops.splice(+btn.dataset.k, 1); if (!set.drops.length) set.kind = ''; }
+      saveDraft(); renderEditor();
+      if (act === 'add-drop'){
+        const ins = document.querySelectorAll(`.ex[data-i="${i}"] [data-f="dropReps"][data-j="${j}"]`);
+        if (ins.length) ins[ins.length - 1].focus();
+      }
+      return;
+    }
+    if (act === 'up' || act === 'down'){
+      const arr = data.draft.exercises, k = act === 'up' ? i - 1 : i + 1;
+      if (k >= 0 && k < arr.length){ [arr[i], arr[k]] = [arr[k], arr[i]]; }
+      saveDraft(); renderEditor();
+      const card = document.querySelector(`.ex[data-i="${k}"]`);
+      if (card){ card.scrollIntoView({block:'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'}); const b = card.querySelector(`[data-act="${act}"]`); if (b && !b.disabled) b.focus(); }
+      return;
+    }
+    if (act === 'add-set'){ data.draft.exercises[i].sets.push({reps:'', kg:''}); }
+    if (act === 'rm-set'){ data.draft.exercises[i].sets.splice(+btn.dataset.j,1); }
+    saveDraft(); renderEditor();
+  });
+
+  $('#last-all').addEventListener('click', () => {
+    let n = 0; data.draft.exercises.forEach(e => { if (applyLast(e)) n++; });
+    saveDraft(); renderEditor();
+    say(n ? `Werte vom letzten Mal für ${n} ${n === 1 ? 'Übung' : 'Übungen'} übernommen. Schon Eingetragenes bleibt stehen.` : 'Noch keine gespeicherten Werte für diese Übungen.', !n);
+  });
+  $('#add-ex').addEventListener('click', () => openPicker('new'));
+
+  // ---- Übungsauswahl ----
+  let pickFor = null;
+  function allExercises(){
+    const m = new Map();
+    TEMPLATES.Push.forEach(n => m.set(n, 'Push'));
+    TEMPLATES.Pull.forEach(n => m.set(n, 'Pull'));
+    (data.custom || []).forEach(c => {
+      const n = typeof c === 'string' ? c : c.name, cat = typeof c === 'string' ? 'Eigene' : (c.cat || 'Eigene');
+      if (n && !m.has(n)) m.set(n, cat);
+    });
+    data.sessions.forEach(s => s.exercises.forEach(e => { if (e.name && !m.has(e.name)) m.set(e.name, 'Eigene'); }));
+    return m;
+  }
+  function openPicker(target){
+    pickFor = target;
+    $('#sheet-title').textContent = target === 'new' ? 'Übung hinzufügen' : 'Übung ändern';
+    $('#sheet-search').value = '';
+    renderPicker();
+    $('#sheet').hidden = false;
+    document.documentElement.style.overflow = 'hidden';
+  }
+  function closePicker(){
+    $('#sheet').hidden = true; document.documentElement.style.overflow = ''; pickFor = null;
+  }
+  function renderPicker(){
+    const raw = $('#sheet-search').value.trim(), q = raw.toLowerCase();
+    const all = allExercises();
+    const current = (pickFor !== 'new' && pickFor != null) ? data.draft.exercises[pickFor].name : null;
+    const inSession = new Set(data.draft.exercises.map(e => e.name));
+    const exact = [...all.keys()].some(n => n.toLowerCase() === q);
+    let html = '';
+    if (raw && !exact){
+      const def = defaultCat();
+      html += `<div class="new-box"><span class="nm">+ „${esc(raw)}“ neu anlegen als</span>
+        <div class="seg" role="group" aria-label="Trainingstag für die neue Übung">${['Push','Pull','Eigene'].map(c =>
+          `<button type="button" class="${c === def ? 'def' : ''}" data-new="${esc(raw)}" data-cat="${c}">${c === 'Eigene' ? 'Sonstige' : c}</button>`).join('')}</div></div>`;
+    }
+    let any = false;
+    ['Push','Pull','Eigene'].forEach(cat => {
+      const names = [...all].filter(([n, c]) => c === cat && (!q || n.toLowerCase().includes(q))).map(([n]) => n);
+      if (!names.length) return;
+      any = true;
+      html += `<div class="p-cat">${cat === 'Eigene' ? 'Sonstige Übungen' : cat}</div>` + names.map(n => `
+        <button class="pick${n === current ? ' cur' : ''}" type="button" data-name="${esc(n)}">
+          <span class="nm">${esc(n)}</span>
+          <span class="tag">${n === current ? '✓' : inSession.has(n) ? 'schon in Session' : ''}</span>
+        </button>`).join('');
+    });
+    if (!any && !raw) html += `<div class="pick-none">Noch keine Übungen.</div>`;
+    $('#sheet-list').innerHTML = html;
+  }
+  const defaultCat = () => ['Push','Pull'].includes(data.draft.type) ? data.draft.type : 'Eigene';
+  function choose(name, cat){
+    name = (name || '').trim(); if (!name) return;
+    if (!allExercises().has(name)) { data.custom = data.custom || []; data.custom.push({ name, cat: cat || defaultCat() }); }
+    let idx;
+    if (pickFor === 'new'){
+      data.draft.exercises.push({ name, note: lastNote(name), sets: [{reps:'',kg:''},{reps:'',kg:''},{reps:'',kg:''}] });
+      idx = data.draft.exercises.length - 1;
+    } else {
+      idx = pickFor;
+      const ex = data.draft.exercises[idx];
+      if (ex.name !== name){ ex.name = name; ex.note = lastNote(name); }
+    }
+    persist(); closePicker(); renderEditor();
+    const card = document.querySelector(`.ex[data-i="${idx}"]`);
+    if (card){ card.scrollIntoView({ block:'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); const b = card.querySelector('[data-act="pick"]'); if (b) b.focus({ preventScroll:true }); }
+  }
+  $('#sheet-search').addEventListener('input', renderPicker);
+  $('#sheet-search').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); const v = e.target.value.trim(); if (v){ const hit = [...allExercises().keys()].find(n => n.toLowerCase() === v.toLowerCase()); choose(hit || v, defaultCat()); } } });
+  $('#sheet-list').addEventListener('click', e => {
+    const nb = e.target.closest('[data-new]'); if (nb) { choose(nb.dataset.new, nb.dataset.cat); return; }
+    const b = e.target.closest('.pick'); if (b) choose(b.dataset.name);
+  });
+  $('#sheet-close').addEventListener('click', closePicker);
+  $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') closePicker(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet').hidden) closePicker(); });
+
+  $('#s-date').addEventListener('input', e => { data.draft.date = e.target.value; saveDraft(); });
+
+
+  // ---- save session ----
+  $('#save').addEventListener('click', () => {
+    const d = data.draft;
+    if (!d.date){ say('Bitte ein Datum wählen.', true); return; }
+    const exercises = d.exercises
+      .map(e => ({
+        name: (e.name||'').trim(),
+        note: (e.note||'').trim(),
+        sets: e.sets.filter(s => s.reps !== '' || s.kg !== '')
+          .map(s => Object.assign({ reps: s.reps === '' ? null : Number(s.reps), kg: s.kg === '' ? null : Number(String(s.kg).replace(',','.')) }, s.kind === 'drop' ? { kind:'drop', drops:(s.drops||[]).map(d => ({ reps: d.reps === '' || d.reps == null ? null : Number(d.reps), kg: d.kg === '' || d.kg == null ? null : Number(String(d.kg).replace(',','.')) })).filter(d => d.reps != null || d.kg != null) } : {}))
+      }))
+      .filter(e => e.name && e.sets.length);
+    if (!exercises.length){
+      say('Mindestens eine Übung mit Name und einem Satz eintragen.', true);
+      return;
+    }
+    data.sessions.push({ id: Date.now(), date: d.date, type: d.type, exercises });
+    data.draft = newDraft();
+    const ok = persist();
+    renderMeta(); renderEditor();
+    say(ok ? 'Session gespeichert.' : 'Session angezeigt, aber der Browser speichert gerade nicht.', !ok);
+    showTab('hist');
+  });
+
+  // ---- history ----
+  function renderHistory(){
+    const list = [...data.sessions].sort((a,b) => (b.date+b.id).localeCompare(a.date+a.id));
+    if (!list.length){
+      $('#history').innerHTML = `<div class="empty">Noch keine Sessions gespeichert.</div>`;
+      return;
+    }
+    $('#history').innerHTML = list.map(s => {
+      const sets = s.exercises.reduce((n,e) => n + e.sets.length, 0);
+      return `
+      <details class="session">
+        <summary>
+          <div>
+            <div class="display" style="font-size:20px">${esc(fmtDate(s.date))}</div>
+            <div class="muted small">${s.exercises.length} ${s.exercises.length===1?'Übung':'Übungen'} · ${sets} ${sets===1?'Satz':'Sätze'}${(()=>{const d=s.exercises.reduce((n,e)=>n+e.sets.filter(x=>x.kind==='drop').length,0);return d?` · ${d} Drop`:''})()}</div>
+          </div>
+          <span class="badge ${esc(s.type)}">${esc(s.type)}</span>
+        </summary>
+        <div class="body">
+          ${s.exercises.map(e => `
+            <div class="hx">
+              <div style="font-weight:600">${esc(e.name)}</div>
+              ${e.note ? `<div class="muted small">${esc(e.note)}</div>` : ''}
+              <div class="chips">
+                ${e.sets.map((x,j) => ` <span class="chip${x.kind==='drop'?' drop':''}">Satz ${j+1}: ${x.reps ?? '–'} × ${fmtKg(x.kg)} kg${x.kind==='drop' ? (dropsOf(x).length ? dropsOf(x).map(d => ` ↘ ${d.reps ?? '–'} × ${fmtKg(d.kg)} kg`).join('') : ' · Drop') : ''}</span>`).join('')}
+              </div>
+            </div>`).join('')}
+          <button class="danger" type="button" data-del="${s.id}">Session löschen</button>
+        </div>
+      </details>`;
+    }).join('');
+  }
+  $('#history').addEventListener('click', e => {
+    const b = e.target.closest('[data-del]');
+    if (!b) return;
+    // No native confirm() in this viewer, so use a two-step button.
+    if (!b.dataset.armed){
+      b.dataset.armed = '1';
+      b.textContent = 'Wirklich löschen? Nochmal tippen';
+      return;
+    }
+    data.sessions = data.sessions.filter(s => String(s.id) !== b.dataset.del);
+    persist(); renderHistory();
+  });
+
+  // ---- progress ----
+  const TREND_PCT = 1; // unter ±1 % zählt als gleich
+  function e1rm(s){ return (s.kg == null || s.reps == null) ? null : s.kg * (1 + s.reps / 30); }
+  function exStats(ex){
+    let best = null, bestSet = null, top = null, vol = 0, reps = 0;
+    ex.sets.forEach(s => {
+      const v = e1rm(s);
+      if (v != null && (best == null || v > best)) { best = v; bestSet = s; }
+      if (s.kg != null && (top == null || s.kg > top)) top = s.kg;
+      if (s.kg != null && s.reps != null) vol += s.kg * s.reps;
+      dropsOf(s).forEach(d => { if (d.kg != null && d.reps != null) vol += d.kg * d.reps; });
+      if (s.reps != null) reps += s.reps;
+    });
+    // Ohne Gewicht (z. B. Rückenstrecker mit Körpergewicht) zählen die Wiederholungen
+    const metric = best != null ? best : (reps || null);
+    return { best, bestSet, top, vol, reps, sets: ex.sets.length, metric, byReps: best == null };
+  }
+  function trendOf(a, b){
+    if (a == null || b == null || b === 0) return { cls:'', txt:'neu', dir:0 };
+    const p = (a - b) / b * 100;
+    if (p >= TREND_PCT) return { cls:'up', txt:'▲ +' + Math.round(p) + ' %', dir:1 };
+    if (p <= -TREND_PCT) return { cls:'down', txt:'▼ ' + Math.round(p) + ' %', dir:-1 };
+    return { cls:'', txt:'= gleich', dir:0 };
+  }
+  function spark(vals){
+    const v = vals.filter(x => x != null);
+    if (v.length < 2) return '<svg class="spark" viewBox="0 0 84 30" aria-hidden="true"></svg>';
+    const min = Math.min(...v), max = Math.max(...v), rng = (max - min) || 1;
+    const pts = v.map((x, i) => [4 + i * (76 / (v.length - 1)), 26 - ((x - min) / rng) * 22]);
+    const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+    const last = pts[pts.length - 1];
+    return `<svg class="spark" viewBox="0 0 84 30" aria-hidden="true">
+      <path d="${d} L${last[0].toFixed(1)} 30 L4 30 Z" fill="currentColor" opacity=".08"></path>
+      <path d="${d}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" opacity=".7"></path>
+      <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.6" fill="var(--accent)"></circle></svg>`;
+  }
+  const kg1 = n => (Math.round(n * 10) / 10).toString().replace('.', ',');
+  function volChart(list){
+    const L = list.slice(-12);
+    if (L.length < 1) return '';
+    const vols = L.map(s => s.exercises.reduce((a, e) => a + exStats(e).vol, 0));
+    const max = Math.max(...vols) || 1;
+    const W = 320, H = 130, top = 16, bottom = 22, left = 4;
+    const bw = (W - left * 2) / L.length;
+    const bars = L.map((s, i) => {
+      const h = (vols[i] / max) * (H - top - bottom);
+      const x = left + i * bw + bw * 0.18, w = bw * 0.64, y = H - bottom - h;
+      const col = s.type === 'Push' ? 'var(--accent)' : s.type === 'Pull' ? 'var(--accent2)' : 'var(--muted)';
+      const d = new Date(s.date + 'T00:00');
+      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(h,1).toFixed(1)}" rx="2" fill="${col}" opacity=".9"><title>${esc(fmtDate(s.date))}: ${Math.round(vols[i])} kg</title></rect>
+        <text x="${(x + w / 2).toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="9" fill="var(--muted)">${d.getDate()}.${d.getMonth() + 1}.</text>`;
+    }).join('');
+    const maxLbl = `<text x="${left}" y="10" font-size="9" fill="var(--muted)">max. ${Math.round(max).toLocaleString('de-DE')} kg</text>
+      <line x1="${left}" x2="${W - left}" y1="${top}" y2="${top}" stroke="var(--line)" stroke-dasharray="2 3"></line>
+      <line x1="${left}" x2="${W - left}" y1="${H - bottom}" y2="${H - bottom}" stroke="var(--line)"></line>`;
+    return `<div class="card vol"><h2>Gesamtvolumen pro Session</h2>
+      <p class="muted small" style="margin:2px 0 8px">Summe aus Wiederholungen × Gewicht aller Sätze</p>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Volumen der letzten ${L.length} Sessions">${maxLbl}${bars}</svg>
+      <div class="legend"><span><i style="background:var(--accent)"></i>Push</span><span><i style="background:var(--accent2)"></i>Pull</span></div></div>`;
+  }
+  function renderProgress(){
+    const list = [...data.sessions].sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id));
+    if (!list.length){
+      $('#progress').innerHTML = `<div class="empty">Hier siehst du, ob du dich verbesserst.<br>Speichere deine erste Session, dann geht's los.</div>`;
+      return;
+    }
+    const byName = new Map();
+    list.forEach(s => s.exercises.forEach(e => {
+      if (!byName.has(e.name)) byName.set(e.name, { name: e.name, type: s.type, rows: [] });
+      const g = byName.get(e.name); g.type = s.type;
+      g.rows.push(Object.assign({ date: s.date }, exStats(e)));
+    }));
+    const order = n => { for (const t of ['Push','Pull']) { const i = TEMPLATES[t].indexOf(n); if (i >= 0) return (t === 'Push' ? 0 : 100) + i; } return 1000; };
+    const groups = { Push: [], Pull: [], Sonstiges: [] };
+    let up = 0, same = 0, down = 0;
+    [...byName.values()].sort((a, b) => order(a.name) - order(b.name) || a.name.localeCompare(b.name)).forEach(g => {
+      const r = g.rows, last = r[r.length - 1], prev = r[r.length - 2];
+      g.trend = trendOf(last.metric, prev && prev.metric);
+      if (prev) { if (g.trend.dir > 0) up++; else if (g.trend.dir < 0) down++; else same++; }
+      (groups[g.type] || groups.Sonstiges).push(g);
+    });
+    const row = g => {
+      const r = g.rows, last = r[r.length - 1];
+      const bestTxt = last.bestSet ? `${kg1(last.bestSet.kg)} kg × ${last.bestSet.reps}` : `${last.reps} Wdh`;
+      const pr = Math.max(...r.map(x => x.metric || 0));
+      return `<details class="p-ex">
+        <summary>
+          <div style="min-width:0"><div class="p-name">${esc(g.name)}</div>
+            <div class="p-sub">Zuletzt: ${last.sets} Sätze · bester Satz ${bestTxt}${last.metric === pr && r.length > 1 ? ' · <b style="color:var(--good)">Rekord</b>' : ''}</div></div>
+          ${spark(r.map(x => x.metric))}
+          <span class="trend ${g.trend.cls}">${g.trend.txt}</span>
+        </summary>
+        <div class="p-wrap"><table class="p-table">
+          <thead><tr><th>Datum</th><th>Sätze</th><th>Bester Satz</th><th>${last.byReps ? 'Wdh gesamt' : 'Kraftwert'}</th><th>Volumen</th></tr></thead>
+          <tbody>${r.slice().reverse().map(x => `<tr>
+            <td>${new Date(x.date + 'T00:00').toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})}</td>
+            <td>${x.sets}</td>
+            <td>${x.bestSet ? kg1(x.bestSet.kg) + ' × ' + x.bestSet.reps : '–'}</td>
+            <td>${x.byReps ? x.reps : kg1(x.best) + ' kg'}</td>
+            <td>${x.vol ? Math.round(x.vol).toLocaleString('de-DE') + ' kg' : '–'}</td></tr>`).join('')}</tbody>
+        </table>
+        <p class="muted small" style="margin:8px 0 0">Kraftwert = geschätztes Maximalgewicht für 1 Wiederholung aus deinem besten Satz (Gewicht × (1 + Wdh/30)). So zählen mehr Wiederholungen und mehr Gewicht beide als Fortschritt.</p></div>
+      </details>`;
+    };
+    const sec = (t, arr) => arr.length ? `<div class="p-group">${t}</div>${arr.map(row).join('')}` : '';
+    $('#progress').innerHTML = `
+      <p class="muted small" style="margin:0 0 8px">Vergleich: letzte Session gegen die davor, pro Übung</p>
+      <div class="p-sum">
+        <div class="p-tile up"><b>${up}</b><span>Besser</span></div>
+        <div class="p-tile"><b>${same}</b><span>Gleich</span></div>
+        <div class="p-tile down"><b>${down}</b><span>Schlechter</span></div>
+      </div>
+      ${volChart(list)}
+      ${sec('Push', groups.Push)}${sec('Pull', groups.Pull)}${sec('Sonstiges', groups.Sonstiges)}`;
+  }
+
+  // ---- init ----
+  renderMeta(); renderEditor();
+  if (!storageOk) say('Hinweis: Der Browser erlaubt hier kein Speichern. Daten gehen beim Schließen verloren.', true);
+  else say('Funktioniert auch offline. Daten bleiben auf diesem Gerät.');
+  showTab('new');
+
+  // ---- online/offline badge ----
+  function net(){ const on = navigator.onLine; const p = $('#net'); p.textContent = on ? 'Online' : 'Offline'; p.classList.toggle('off', !on); }
+  addEventListener('online', net); addEventListener('offline', net); net();
+
+  // ---- backup ----
+  function bsay(m, err){ const el = $('#bstatus'); el.textContent = m; el.classList.toggle('err', !!err); }
+  $('#exp').addEventListener('click', async () => {
+    const json = JSON.stringify({ app:'trainingslog', version:1, exported:new Date().toISOString(), sessions:data.sessions }, null, 1);
+    const name = 'trainingslog-' + today() + '.json';
+    try {
+      const file = new File([json], name, { type:'application/json' });
+      if (navigator.canShare && navigator.canShare({ files:[file] })) { await navigator.share({ files:[file], title:'Trainingslog Sicherung' }); bsay('Sicherung geteilt.'); return; }
+    } catch(e){ if (e && e.name === 'AbortError') return; }
+    try {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([json], {type:'application/json'})); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      bsay('Sicherung heruntergeladen.');
+    } catch(e){
+      $('#imp-text').value = json; $('#imp-text').select(); bsay('Text unten kopieren und sicher ablegen.');
+    }
+  });
+  function importJson(txt){
+    let obj; try { obj = JSON.parse(txt); } catch(e){ bsay('Das ist keine gültige Sicherung.', true); return; }
+    const list = Array.isArray(obj) ? obj : obj.sessions;
+    if (!Array.isArray(list)){ bsay('In der Datei wurden keine Sessions gefunden.', true); return; }
+    const ids = new Set(data.sessions.map(s => String(s.id)));
+    let n = 0;
+    list.forEach(s => { if (s && s.date && Array.isArray(s.exercises) && !ids.has(String(s.id))) { data.sessions.push(s); ids.add(String(s.id)); n++; } });
+    persist(); renderHistory(); renderEditor();
+    bsay(n + ' Session(s) importiert.');
+  }
+  $('#imp-btn').addEventListener('click', () => $('#imp-file').click());
+  $('#imp-file').addEventListener('change', e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => importJson(r.result); r.readAsText(f); e.target.value=''; });
+  $('#imp-apply').addEventListener('click', () => { const t = $('#imp-text').value.trim(); if (t) importJson(t); });
+
+  // ---- offline support ----
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){}
+})();
+</script>
+</body>
+</html>
