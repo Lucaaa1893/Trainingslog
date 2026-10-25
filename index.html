@@ -393,6 +393,12 @@ input[type=date]{width:100%;display:block}
 .wipe h2{margin-bottom:4px}
 .wipe .muted{margin:0 0 8px}
 .dlg-btns .dlg-del{color:#fff;background:linear-gradient(180deg,#FF5E55,#E2362C);border-color:rgba(255,255,255,.35);box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 8px 18px -8px rgba(226,54,44,.8)}
+
+.meta-actions{display:flex;gap:8px;margin-top:12px}
+.meta-actions .ghost{margin-top:0;flex:1 1 0;min-width:0}
+#last-all{margin-top:0}
+.ghost.clr{color:var(--bad)}
+.ex-actions .ghost{padding:12px 8px;font-size:14px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -429,7 +435,10 @@ input[type=date]{width:100%;display:block}
         <button class="select-btn" id="s-type" type="button" aria-labelledby="l-type s-type" aria-haspopup="menu" aria-expanded="false"><span id="s-type-label">Push</span></button>
       </div>
     </div>
-    <button class="ghost alt" id="last-all" type="button" hidden>↺ Alle Werte vom letzten Mal</button>
+    <div class="meta-actions">
+      <button class="ghost alt" id="last-all" type="button" hidden>↺ Alle letzten Werte</button>
+      <button class="ghost alt clr" id="clear-all" type="button">Alle leeren</button>
+    </div>
   </div>
 
   <div id="editor"></div>
@@ -454,11 +463,6 @@ input[type=date]{width:100%;display:block}
     <textarea id="imp-text" placeholder="Oder Sicherungstext hier einfügen und auf „Text übernehmen“ tippen" aria-label="Sicherungstext"></textarea>
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
-  </div>
-  <div class="card wipe">
-    <h2>Alte Werte löschen</h2>
-    <p class="muted small">Löscht alle gespeicherten Trainings. Deine Übungen, Trainingstage und Maschineneinstellungen bleiben erhalten.</p>
-    <button class="danger wide" id="wipe" type="button">Alle Trainings löschen</button>
   </div>
 </section>
 
@@ -699,6 +703,25 @@ input[type=date]{width:100%;display:block}
   }
   $('#s-type').addEventListener('click', e => openMenu(e.currentTarget, typeOpts(), data.draft.type, setType));
 
+  // ---- Alle eingetragenen Werte leeren ----
+  $('#clear-all').addEventListener('click', () => {
+    const bg = document.createElement('div'); bg.className = 'dlg-bg';
+    bg.innerHTML = `<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="clr-t" aria-describedby="clr-d">
+      <h2 id="clr-t">Alle Werte leeren?</h2>
+      <p class="dlg-sub" id="clr-d">Wiederholungen, Gewichte und Drops aller Übungen in dieser Session werden geleert. Übungen, Sätze und Maschineneinstellungen bleiben. Gespeicherte Trainings sind nicht betroffen.</p>
+      <div class="dlg-btns"><button type="button" class="dlg-cancel">Abbrechen</button><button type="button" class="dlg-ok dlg-del">Leeren</button></div>
+    </div>`;
+    document.body.append(bg);
+    const close = () => bg.remove();
+    bg.addEventListener('click', e => { if (e.target === bg) close(); });
+    bg.querySelector('.dlg-cancel').addEventListener('click', close);
+    bg.querySelector('.dlg-del').addEventListener('click', () => {
+      data.draft.exercises.forEach(ex => { ex.sets = ex.sets.map(() => ({ reps:'', kg:'' })); });
+      saveDraft(); close(); renderEditor();
+      say('Alle Werte geleert.');
+    });
+  });
+
   // ---- Alle Trainings löschen ----
   function openWipe(){
     const n = data.sessions.length;
@@ -725,7 +748,6 @@ input[type=date]{width:100%;display:block}
     });
     document.addEventListener('keydown', function esc(e){ if (e.key === 'Escape'){ close(); document.removeEventListener('keydown', esc); } });
   }
-  $('#wipe').addEventListener('click', openWipe);
 
   // ---- Neuer Trainingstag ----
   function openNewDay(){
@@ -827,6 +849,7 @@ input[type=date]{width:100%;display:block}
           </div>` : ''}`; }).join('')}
         <div class="ex-actions">
           ${lastEx(e.name) ? `<button class="ghost alt" type="button" data-act="last">↺ Letzte Werte</button>` : ''}
+          <button class="ghost alt clr" type="button" data-act="clear" aria-label="Werte von ${esc(e.name)} leeren">Leeren</button>
           <button class="ghost" type="button" data-act="add-set">+ Satz</button>
         </div>
       </section>`).join('');
@@ -882,6 +905,13 @@ input[type=date]{width:100%;display:block}
     const i = card ? +card.dataset.i : -1;
     const act = btn.dataset.act;
     if (act === 'pick'){ openPicker(i); return; }
+    if (act === 'clear'){
+      const ex = data.draft.exercises[i];
+      ex.sets = ex.sets.map(() => ({ reps:'', kg:'' }));
+      saveDraft(); renderEditor();
+      say(`${ex.name}: Werte geleert.`);
+      return;
+    }
     if (act === 'kind'){ const j = +btn.dataset.j; openMenu(btn, KIND_OPTS, data.draft.exercises[i].sets[j].kind || '', v => setKind(i, j, v)); return; }
     if (act === 'rm-ex'){ data.draft.exercises.splice(i,1); }
     if (act === 'last'){
