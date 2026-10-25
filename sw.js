@@ -1,7 +1,7 @@
 // Offline-Cache für den Trainingslog. VERSION erhöhen, wenn sich Dateien ändern.
-const VERSION = 32;
+const VERSION = 33;
 const CACHE = 'trainingslog-v' + VERSION;
-const CORE = ['./', './index.html', './manifest.json', './icon8-180.png', './icon8-192.png', './icon8-512.png'];
+const CORE = ['./', './index.html', './manifest.json', './icon9-180.png', './icon9-192.png', './icon9-512.png'];
 
 self.addEventListener('install', e => {
   // cache:'reload' umgeht den Browser-Zwischenspeicher, damit wirklich die neue Version geladen wird
