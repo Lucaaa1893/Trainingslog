@@ -474,6 +474,8 @@ input[type=date]{width:100%;display:block}
 .lens.grab::before{opacity:1}
 .tab.hover{color:var(--fg)}
 .tab.held,.tab.press{transform:none!important;box-shadow:none!important;animation:none!important}
+.tab{transition:color .25s ease, scale .35s var(--spring)}
+.tabs.grabbing .tab.hover,.tab.hover{scale:1.1}
 .tab::after{display:none}
 .tabs.grabbing .tab[aria-selected="true"]:not(.hover){color:var(--muted)}
 
@@ -496,7 +498,7 @@ input[type=date]{width:100%;display:block}
   background:radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,.6), rgba(255,255,255,.06) 55%, rgba(255,255,255,.22));
   -webkit-backdrop-filter:blur(.6px) saturate(170%) brightness(1.05);backdrop-filter:blur(.6px) saturate(170%) brightness(1.05);
   box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.95), inset 0 2px 1px #fff, inset 0 -3px 6px -2px rgba(255,255,255,.95), inset 0 0 16px rgba(110,120,150,.22), 0 12px 28px -10px rgba(30,40,70,.45)}
-.tab{transition:color .25s ease}
+.tab{transition:color .25s ease, scale .35s var(--spring)}
 .tab[aria-selected="true"],.tab.hover{color:var(--accent-text)}
 .tabs.grabbing .tab[aria-selected="true"]:not(.hover){color:var(--muted)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
@@ -571,7 +573,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 40</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 41</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -707,7 +709,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 40;
+  const MY_VERSION = 41;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -962,7 +964,11 @@ input[type=date]{width:100%;display:block}
     lens.classList.add('drag');
     let x = e.clientX - tabDrag.left - 4 - tabDrag.w / 2;
     const maxX = tabDrag.w * 2;
+    const over = x < 0 ? -x : x > maxX ? x - maxX : 0;   // wie weit über den Rand gezogen
     x = Math.max(0, Math.min(maxX, x));   // bleibt immer innerhalb der Leiste
+    // am Rand: Blase zoomt federnd größer statt weiterzurutschen
+    const z = over ? Math.min(0.22, over / 260) : 0;
+    lens.style.scale = z ? `${1.1 + z} ${1.45 + z * 0.8}` : '';
     lens.style.transformOrigin = `${(x / maxX) * 100}% 50%`;   // wächst am Rand nach innen
     lens.style.translate = `${x}px 0`;
     hoverTab(Math.max(0, Math.min(2, Math.round(x / tabDrag.w))));
@@ -971,6 +977,7 @@ input[type=date]{width:100%;display:block}
     if (!tabDrag) return;
     const d = tabDrag; tabDrag = null;
     const lens = $('#lens');
+    lens.style.scale = '';
     lens.classList.remove('drag', 'grab'); tabBar.classList.remove('grabbing'); hoverTab(-1);
     let idx;
     if (d.moved){ const m = /(-?[\d.]+)px/.exec(lens.style.translate); idx = Math.max(0, Math.min(2, Math.round((m ? +m[1] : 0) / d.w))); }
