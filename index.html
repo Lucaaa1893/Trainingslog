@@ -501,6 +501,15 @@ input[type=date]{width:100%;display:block}
 .tab{transition:color .25s ease, scale .35s var(--spring)}
 .tab[aria-selected="true"],.tab.hover{color:var(--accent-text)}
 .tabs.grabbing .tab[aria-selected="true"]:not(.hover){color:var(--muted)}
+
+/* Dicker Lupen-Rand: am Rand der Glasblase wird der Hintergrund verzerrt/vergrößert */
+.lens::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:0;opacity:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,.12) 45%,rgba(255,255,255,.55));
+  -webkit-backdrop-filter:blur(2.5px) saturate(200%) brightness(1.12) contrast(1.15);backdrop-filter:blur(2.5px) saturate(200%) brightness(1.12) contrast(1.15);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;
+  transition:opacity .25s ease, padding .35s var(--spring)}
+.lens.grab::after,.lens.travel::after{opacity:1;padding:9px}
+.lens.drag::after{padding:11px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -573,7 +582,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 42</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 43</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -709,7 +718,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 42;
+  const MY_VERSION = 43;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
