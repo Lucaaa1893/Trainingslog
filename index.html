@@ -523,6 +523,13 @@ input[type=date]{width:100%;display:block}
 /* Safari-Fix: keine Unschärfe auf der bewegten Blase (verursacht hängende Bilder) */
 .lens,.lens.grab,.lens.travel,.lens.drag{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 .lens::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+
+/* Lesbarkeit beim Wischen: Blase durchsichtig HINTER der Schrift, Text darunter groß und blau */
+.lens-mag{display:none!important}
+.lens.grab,.lens.travel{z-index:0!important;
+  background:radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,.8), rgba(255,255,255,.28) 55%, rgba(255,255,255,.45))}
+.tab{z-index:1}
+.tabs.grabbing .tab.hover,.tab.hover{scale:1.24;color:var(--accent-text);font-weight:700}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -596,7 +603,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 47</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 48</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -732,7 +739,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 47;
+  const MY_VERSION = 48;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1010,6 +1017,7 @@ input[type=date]{width:100%;display:block}
     lens.classList.add('grab');
     tabBar.classList.add('grabbing');
     kickMag();
+    hoverTab(+lens.dataset.idx || 0);
   });
   tabBar.addEventListener('pointermove', e => {
     if (!tabDrag || e.pointerId !== tabDrag.id) return;
