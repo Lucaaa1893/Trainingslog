@@ -483,6 +483,22 @@ input[type=date]{width:100%;display:block}
   padding:8px 8px 8px 18px;border-radius:999px;color:#fff;background:rgba(104,106,113,.9);-webkit-backdrop-filter:blur(30px) saturate(170%);backdrop-filter:blur(30px) saturate(170%);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.28), 0 18px 40px -12px rgba(0,0,0,.4);font-weight:600;font-size:15px;white-space:nowrap;animation:menu-in .5s var(--spring)}
 .upd button{border:0;border-radius:999px;padding:10px 16px;font:700 15px/1 var(--f-body);color:#fff;background:var(--shine), linear-gradient(180deg,#4B8EFF,#2A6FEA)}
+
+/* iOS-26-Tab-Leiste: graue Pille in Ruhe, klare Glasblase in Bewegung */
+.tabs,.tabs.grabbing{overflow-x:clip;overflow-y:visible}
+.tabs::before{display:none}
+.lens::before{display:none}
+.lens{background:rgba(118,118,128,.16);box-shadow:inset 0 1px 1px rgba(255,255,255,.55), inset 0 0 0 .5px rgba(255,255,255,.45);
+  transition:translate .55s cubic-bezier(.3,1.25,.45,1), scale .42s var(--spring), background .3s ease, box-shadow .3s ease}
+.lens.drag{transition:scale .42s var(--spring), background .3s ease, box-shadow .3s ease}
+.lens.moving{animation:none}
+.lens.grab,.lens.travel{scale:1.1 1.45;
+  background:radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,.6), rgba(255,255,255,.06) 55%, rgba(255,255,255,.22));
+  -webkit-backdrop-filter:blur(.6px) saturate(170%) brightness(1.05);backdrop-filter:blur(.6px) saturate(170%) brightness(1.05);
+  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.95), inset 0 2px 1px #fff, inset 0 -3px 6px -2px rgba(255,255,255,.95), inset 0 0 16px rgba(110,120,150,.22), 0 12px 28px -10px rgba(30,40,70,.45)}
+.tab{transition:color .25s ease}
+.tab[aria-selected="true"],.tab.hover{color:var(--accent-text)}
+.tabs.grabbing .tab[aria-selected="true"]:not(.hover){color:var(--muted)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -555,7 +571,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 39</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 40</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -691,7 +707,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 39;
+  const MY_VERSION = 40;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -759,7 +775,14 @@ input[type=date]{width:100%;display:block}
     if (!lens || idx < 0) return;
     const prev = lens.dataset.idx;
     lens.style.translate = `${idx * 100}% 0`;
-    if (prev != null && +prev !== idx && !reduce){ lens.classList.remove('moving'); void lens.offsetWidth; lens.classList.add('moving'); }
+    if (prev != null && +prev !== idx && !reduce){
+      // wie iOS: Pille wird beim Wechseln zur großen Glasblase, gleitet rüber und schrumpft wieder
+      lens.style.transformOrigin = `${idx * 50}% 50%`;
+      lens.classList.add('travel');
+      clearTimeout(lens._t); lens._t = setTimeout(() => lens.classList.remove('travel'), 420);
+      const from = +prev, to = idx, step = to > from ? 1 : -1;
+      for (let k = from; k !== to + step; k += step) setTimeout(() => hoverTab(k === to ? -1 : k), Math.abs(k - from) * 120);
+    }
     lens.dataset.idx = idx;
   }
   $('#lens').addEventListener('animationend', e => e.currentTarget.classList.remove('moving'));
