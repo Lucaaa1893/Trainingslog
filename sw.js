@@ -1,5 +1,5 @@
 // Offline-Cache für den Trainingslog. VERSION erhöhen, wenn sich Dateien ändern.
-const VERSION = 38;
+const VERSION = 39;
 const CACHE = 'trainingslog-v' + VERSION;
 const CORE = ['./', './index.html', './manifest.json', './icon13-180.png', './icon13-192.png', './icon13-512.png'];
 
@@ -16,6 +16,7 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  if (url.searchParams.has('check')) return;   // Update-Prüfung immer direkt übers Netz
   // App-Seite: immer frisch aus dem Netz (ohne Zwischenspeicher), offline aus dem Cache
   if (req.mode === 'navigate') {
     e.respondWith(fetch(req.url, { cache:'no-store' }).then(r => {
