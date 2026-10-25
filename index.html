@@ -608,6 +608,47 @@ input[type=date]{width:100%;display:block}
 :root[data-theme="dark"] .upd,:root[data-theme="dark"] .dlg{background:rgba(44,46,54,.92)}
 :root[data-theme="dark"] .drops{background:linear-gradient(90deg,rgba(255,170,40,.16),rgba(255,170,40,.05));border-color:rgba(255,255,255,.1)}
 :root[data-theme="dark"] .chip.drop{color:#FFB547}
+
+/* Level-System */
+.lvl-chip{margin-top:8px;display:inline-flex;align-items:center;gap:6px;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.7);border-radius:999px;padding:6px 12px;font:600 13px/1 var(--f-body);color:var(--fg);background:var(--drop-btn);box-shadow:var(--drop-shadow)}
+.lvl-chip b{color:var(--accent-text)}
+.lvl-chip i{position:absolute;left:0;bottom:0;height:3px;width:var(--p,0%);background:linear-gradient(90deg,#4B8EFF,#9358F2)}
+.lvl-chip::after{display:none}
+.lv-top{display:flex;gap:16px;align-items:center}
+.lv-ring{--p:0;flex:0 0 84px;width:84px;height:84px;border-radius:50%;display:grid;place-content:center;text-align:center;position:relative;
+  background:conic-gradient(#4B8EFF calc(var(--p)*1%), #9358F2 calc(var(--p)*1%), var(--fill) 0);}
+.lv-ring::before{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--bg);box-shadow:inset 0 1px 3px rgba(0,0,0,.12)}
+.lv-ring b,.lv-ring span{position:relative}
+.lv-ring b{font:800 30px/1 var(--f-display)}
+.lv-ring span{font-size:11px;color:var(--muted);font-weight:600}
+.lv-info{flex:1;min-width:0}
+.lv-title{font:700 22px/1.15 var(--f-display);margin-bottom:8px}
+.lv-bar{height:10px;border-radius:999px;background:var(--fill);overflow:hidden}
+.lv-bar i{display:block;height:100%;border-radius:999px;background:var(--shine), linear-gradient(90deg,#4B8EFF,#9358F2)}
+.lv-sub{font-size:12px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
+.lv-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
+.lv-stat{background:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.7);border-radius:16px;padding:10px;box-shadow:inset 0 1px 1px #fff}
+.lv-stat b{display:block;font:700 18px/1.1 var(--f-display);white-space:nowrap}
+.lv-stat span{font-size:11px;color:var(--muted)}
+.lv-more{margin-top:12px}
+.lv-more summary{cursor:pointer;color:var(--accent-text);font-weight:600;font-size:14px;list-style:none}
+.lv-more summary::-webkit-details-marker{display:none}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:12px}
+.badge-i{display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;padding:10px 6px;border-radius:16px;background:var(--fill);opacity:.45;filter:grayscale(1)}
+.badge-i.ok{opacity:1;filter:none;background:linear-gradient(160deg,rgba(255,215,90,.35),rgba(255,160,60,.15));box-shadow:inset 0 0 0 1px rgba(255,190,80,.5)}
+.badge-i span{font-size:26px}
+.badge-i b{font-size:12px}
+.badge-i small{font-size:10px;color:var(--muted);line-height:1.2}
+.xp-rules{margin:12px 0 0;padding-left:18px;font-size:13px;color:var(--muted)}
+.xpgain{margin:6px 0 10px;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.14)}
+.xpgain .xg-top{display:flex;justify-content:space-between;align-items:baseline;font-weight:700}
+.xpgain .xg-top b{font-size:24px;color:#7CF0A6}
+.xpgain .xg-bar{height:8px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden;margin-top:8px}
+.xpgain .xg-bar i{display:block;height:100%;width:var(--from);background:linear-gradient(90deg,#4B8EFF,#C38BFF);animation:xpfill 1.2s .3s cubic-bezier(.3,1,.4,1) forwards}
+@keyframes xpfill{to{width:var(--to)}}
+.xpgain .lvup{margin-top:8px;font-weight:800;color:#FFD166}
+:root[data-theme="dark"] .lv-stat{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1);box-shadow:none}
+:root[data-theme="dark"] .lvl-chip{border-color:rgba(255,255,255,.12)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -621,6 +662,7 @@ input[type=date]{width:100%;display:block}
   <div>
     <h1>Trainingslog</h1>
     <div class="kicker">Push · Pull · Fortschritt</div>
+    <button class="lvl-chip" id="lvl-chip" type="button" aria-label="Level ansehen">Lv 1</button>
   </div>
   <div class="hdr-right"><button class="icon" id="theme" type="button" aria-label="Dunklen Modus einschalten">☾</button><span class="pill" id="net">Online</span></div>
 </header>
@@ -683,7 +725,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 50</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 51</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -819,7 +861,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 50;
+  const MY_VERSION = 51;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1077,6 +1119,7 @@ input[type=date]{width:100%;display:block}
     });
     moveLens(which);
     const view = $('#view-' + which); if (view && !reduce){ view.classList.remove('pop-in'); void view.offsetWidth; view.classList.add('pop-in'); }
+    updateLevelChip();
     if (which === 'hist') renderHistory();
     if (which === 'prog') renderProgress();
     if (typeof sheen === 'function' && !reduce) requestAnimationFrame(sheen);
@@ -1424,6 +1467,7 @@ input[type=date]{width:100%;display:block}
       return;
     }
     const before = data.sessions.slice();
+    const xpB = xpInfo(before);
     const ses = { id: Date.now(), date: d.date, type: d.type, exercises };
     if (d.start) ses.duration = Math.max(1, Math.round((Date.now() - d.start) / 60000));
     const prs = [];
@@ -1434,7 +1478,9 @@ input[type=date]{width:100%;display:block}
     renderMeta(); renderEditor(); updateTimer();
     say(ok ? `Session gespeichert${ses.duration ? ' · ' + fmtDur(ses.duration) : ''}.` : 'Session angezeigt, aber der Browser speichert gerade nicht.', !ok);
     showTab('hist');
-    showCard(ses, prs);
+    const xpA = xpInfo(data.sessions);
+    updateLevelChip();
+    showCard(ses, prs, { gain: xpA.total - xpB.total, b: xpB, a: xpA });
   });
 
   // ---- history ----
@@ -1701,6 +1747,7 @@ input[type=date]{width:100%;display:block}
     };
     const sec = (t, arr) => arr.length ? `<div class="p-group">${t}</div>${arr.map(row).join('')}` : '';
     $('#progress').innerHTML = `
+      ${levelCard(list)}
       <p class="muted small" style="margin:0 0 8px">Vergleich: letzte Session gegen die davor, pro Übung</p>
       <div class="p-sum">
         <div class="p-tile up"><b>${up}</b><span>Besser</span></div>
@@ -1714,6 +1761,79 @@ input[type=date]{width:100%;display:block}
     const vsc = document.querySelector('#progress .vscroll'); if (vsc) vsc.scrollLeft = vsc.scrollWidth;
   }
 
+
+
+  // ===================== Level-System =====================
+  const XP = { training:100, set:5, pr:50, week:100, weekGoal:2 };
+  const TITLES = [[1,'Anfänger'],[3,'Eisen-Rookie'],[5,'Pumper'],[8,'Kraftpaket'],[12,'Biest'],[16,'Titan'],[20,'Legende'],[30,'Unaufhaltsam']];
+  const titleOf = lv => TITLES.filter(t => lv >= t[0]).pop()[1];
+  function weekKey(iso){ const d = new Date(iso + 'T00:00'); const wd = (d.getDay() + 6) % 7; d.setDate(d.getDate() - wd); return isoDay(d); }
+  function xpInfo(sessions){
+    const list = [...sessions].sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id));
+    const best = new Map(), weekCount = new Map();
+    let total = 0, prs = 0, drops = 0, maxVol = 0, totalVol = 0;
+    list.forEach(s => {
+      let xp = XP.training;
+      s.exercises.forEach(e => {
+        const st = exStats(e); xp += XP.set * st.sets;
+        drops += e.sets.filter(x => x.kind === 'drop').length;
+        if (st.best != null){ const b = best.get(e.name); if (b != null && st.best > b + 0.01){ xp += XP.pr; prs++; } if (b == null || st.best > b) best.set(e.name, st.best); }
+      });
+      const wk = weekKey(s.date), n = (weekCount.get(wk) || 0) + 1; weekCount.set(wk, n);
+      if (n === XP.weekGoal) xp += XP.week;
+      const v = s.exercises.reduce((a, e) => a + exStats(e).vol, 0); maxVol = Math.max(maxVol, v); totalVol += v;
+      total += xp;
+    });
+    let lv = 1, rest = total, need = 300;
+    while (rest >= need){ rest -= need; lv++; need = 300 + (lv - 1) * 150; }
+    // Wochen-Serie: aufeinanderfolgende Wochen mit erreichtem Ziel (laufende Woche zählt mit, wenn erreicht)
+    let streak = 0; const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    const thisWk = isoDay(d), thisCount = weekCount.get(thisWk) || 0;
+    if (thisCount < XP.weekGoal) d.setDate(d.getDate() - 7);
+    while ((weekCount.get(isoDay(d)) || 0) >= XP.weekGoal){ streak++; d.setDate(d.getDate() - 7); }
+    return { total, level: lv, into: rest, need, title: titleOf(lv), prs, drops, maxVol, totalVol, count: list.length, streak, thisCount };
+  }
+  const BADGES = [
+    ['🎯', 'Erstes Training', 'Speichere dein erstes Training', i => i.count >= 1],
+    ['🔟', '10 Trainings', '10 Trainings gespeichert', i => i.count >= 10],
+    ['💯', '50 Trainings', '50 Trainings gespeichert', i => i.count >= 50],
+    ['🏆', 'Erster Rekord', 'Schlage einen Bestwert', i => i.prs >= 1],
+    ['👑', 'Rekordjäger', '10 Rekorde aufgestellt', i => i.prs >= 10],
+    ['🔥', 'Dranbleiber', '4 Wochen in Folge Wochenziel', i => i.streak >= 4],
+    ['🏋️', 'Tonne bewegt', '1 t Volumen in einem Training', i => i.maxVol >= 1000],
+    ['🚛', '5 Tonnen', '5 t Volumen in einem Training', i => i.maxVol >= 5000],
+    ['🌍', '100 Tonnen', '100 t Volumen insgesamt', i => i.totalVol >= 100000],
+    ['💧', 'Drop-Meister', '10 Dropsätze gemacht', i => i.drops >= 10],
+    ['⭐', 'Level 10', 'Erreiche Level 10', i => i.level >= 10]
+  ];
+  const fmtXP = n => Math.round(n).toLocaleString('de-DE');
+  function levelCard(all){
+    const i = xpInfo(all), pct = Math.min(100, i.into / i.need * 100);
+    const got = BADGES.filter(b => b[3](i));
+    return `<div class="card lvlcard" id="lvlcard">
+      <div class="lv-top">
+        <div class="lv-ring" style="--p:${pct.toFixed(1)}"><b>${i.level}</b><span>Level</span></div>
+        <div class="lv-info"><div class="lv-title">${esc(i.title)}</div>
+          <div class="lv-bar"><i style="width:${pct.toFixed(1)}%"></i></div>
+          <div class="lv-sub">${fmtXP(i.into)} / ${fmtXP(i.need)} XP bis Level ${i.level + 1} · gesamt ${fmtXP(i.total)} XP</div></div>
+      </div>
+      <div class="lv-row">
+        <div class="lv-stat"><b>${i.streak ? '🔥 ' + i.streak : '–'}</b><span>${i.streak === 1 ? 'Woche' : 'Wochen'} Serie</span></div>
+        <div class="lv-stat"><b>${Math.min(i.thisCount, XP.weekGoal)}/${XP.weekGoal}</b><span>Wochenziel${i.thisCount >= XP.weekGoal ? ' ✓' : ''}</span></div>
+        <div class="lv-stat"><b>${got.length}/${BADGES.length}</b><span>Abzeichen</span></div>
+      </div>
+      <details class="lv-more"><summary>Abzeichen & so gibt's XP</summary>
+        <div class="badges">${BADGES.map(b => { const ok = b[3](i); return `<div class="badge-i${ok ? ' ok' : ''}" title="${esc(b[2])}"><span>${b[0]}</span><b>${esc(b[1])}</b><small>${esc(b[2])}</small></div>`; }).join('')}</div>
+        <ul class="xp-rules"><li>+${XP.training} XP pro Training</li><li>+${XP.set} XP pro Arbeitssatz</li><li>+${XP.pr} XP pro neuem Rekord</li><li>+${XP.week} XP, wenn du ${XP.weekGoal} Trainings in einer Woche schaffst</li></ul>
+      </details>
+    </div>`;
+  }
+  function updateLevelChip(){
+    const c = $('#lvl-chip'); if (!c) return;
+    const i = xpInfo(data.sessions), pct = Math.min(100, i.into / i.need * 100);
+    c.innerHTML = `<b>Lv ${i.level}</b> ${esc(i.title)}<i style="--p:${pct.toFixed(1)}%"></i>`;
+  }
+  $('#lvl-chip').addEventListener('click', () => { showTab('prog'); setTimeout(() => { const el = $('#lvlcard'); if (el) el.scrollIntoView({ block:'start', behavior: reduce ? 'auto' : 'smooth' }); }, 60); });
 
   // ===================== Neue Funktionen (v50) =====================
   const KIND_LABEL = { '': 'Normal', drop: 'Drop', warm: 'Aufw.' };
@@ -1822,6 +1942,8 @@ input[type=date]{width:100%;display:block}
     x.font = `600 40px ${F}`; x.fillStyle = '#5A6170'; x.fillText(fmtDate(ses.date), 80, 262);
     rr(x, 80, 300, x.measureText(ses.type).width + 120, 84, 42); x.fillStyle = col; x.fill();
     x.fillStyle = '#fff'; x.font = `700 46px ${F}`; x.fillText(ses.type, 140, 358);
+    { const li = xpInfo(data.sessions.filter(z => (z.date + z.id) <= (ses.date + ses.id))); const lx = 80 + x.measureText(ses.type).width + 150;
+      x.font = `700 40px ${F}`; x.fillStyle = '#15171B'; x.fillText(`Level ${li.level} · ${li.title}`, lx, 358); }
     // Kennzahlen
     const sets = ses.exercises.reduce((n, e) => n + e.sets.filter(isWork).length, 0);
     const vol = ses.exercises.reduce((a, e) => a + exStats(e).vol, 0);
@@ -1844,10 +1966,14 @@ input[type=date]{width:100%;display:block}
       x.fillText(`🏆 ${prs.length} neue${prs.length === 1 ? 'r' : ''} Rekord${prs.length === 1 ? '' : 'e'}!`, 540, 1806); x.textAlign = 'left'; }
     return c;
   }
-  function showCard(ses, prs){
+  function showCard(ses, prs, xp){
     const c = makeCard(ses, prs), url = c.toDataURL('image/png');
+    const lvUp = xp && xp.a.level > xp.b.level;
+    const fromP = xp ? (lvUp ? 0 : xp.b.into / xp.b.need * 100) : 0, toP = xp ? xp.a.into / xp.a.need * 100 : 0;
+    const xpHtml = xp ? `<div class="xpgain" style="--from:${fromP.toFixed(1)}%;--to:${toP.toFixed(1)}%"><div class="xg-top"><span>Level ${xp.a.level} · ${esc(xp.a.title)}</span><b>+${fmtXP(xp.gain)} XP</b></div><div class="xg-bar"><i></i></div>${lvUp ? `<div class="lvup">⬆️ Level-Up! Du bist jetzt Level ${xp.a.level} – ${esc(xp.a.title)}</div>` : ''}</div>` : '';
     const bg = document.createElement('div'); bg.className = 'dlg-bg';
     bg.innerHTML = `<div class="dlg cardlg" role="dialog" aria-modal="true" aria-labelledby="sc-t">
+      ${xpHtml}
       ${prs && prs.length ? `<h2 id="sc-t">🏆 Neuer Rekord!</h2><div class="prlist">${prs.map(p => `<div><b>${esc(p.name)}</b><span>${kg1(p.set.kg)} kg × ${p.set.reps}${p.prev ? ` · vorher ${kg1(p.prev.set.kg)} × ${p.prev.set.reps}` : ''}</span></div>`).join('')}</div>` : `<h2 id="sc-t">Teilen-Karte</h2>`}
       <img class="sc-img" src="${url}" alt="Teilen-Karte des Trainings">
       <p class="dlg-sub" style="margin:8px 0 12px">Bild gedrückt halten, um es in Fotos zu sichern.</p>
