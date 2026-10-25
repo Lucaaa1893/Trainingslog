@@ -399,6 +399,9 @@ input[type=date]{width:100%;display:block}
 #last-all{margin-top:0}
 .ghost.clr{color:var(--bad)}
 .ex-actions .ghost{padding:12px 8px;font-size:14px}
+
+.s-right{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.s-del{width:34px;height:34px;color:var(--bad)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -655,6 +658,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Liquid-Menü (ersetzt die iOS-Auswahl) ----
+  const TRASH = '<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.2c.05.7.6 1.3 1.3 1.3h3.2c.7 0 1.25-.6 1.3-1.3l.6-8.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const CHEV = '<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   let menuState = null;
   function openMenu(anchor, options, current, onPick){
@@ -1073,7 +1077,10 @@ input[type=date]{width:100%;display:block}
             <div class="display" style="font-size:20px">${esc(fmtDate(s.date))}</div>
             <div class="muted small">${s.exercises.length} ${s.exercises.length===1?'Übung':'Übungen'} · ${sets} ${sets===1?'Satz':'Sätze'}${(()=>{const d=s.exercises.reduce((n,e)=>n+e.sets.filter(x=>x.kind==='drop').length,0);return d?` · ${d} Drop`:''})()}</div>
           </div>
-          <span class="badge ${esc(s.type)}"${['Push','Pull'].includes(s.type) ? '' : ` style="color:#fff;background:var(--shine), ${dayColor(s.type)}"`}>${esc(s.type)}</span>
+          <div class="s-right">
+            <span class="badge ${esc(s.type)}"${['Push','Pull'].includes(s.type) ? '' : ` style="color:#fff;background:var(--shine), ${dayColor(s.type)}"`}>${esc(s.type)}</span>
+            <button class="icon rm s-del" type="button" data-del="${s.id}" aria-label="Training vom ${esc(fmtDate(s.date))} löschen">${TRASH}</button>
+          </div>
         </summary>
         <div class="body">
           ${s.exercises.map(e => `
@@ -1084,7 +1091,7 @@ input[type=date]{width:100%;display:block}
                 ${e.sets.map((x,j) => ` <span class="chip${x.kind==='drop'?' drop':''}">Satz ${j+1}: ${x.reps ?? '–'} × ${fmtKg(x.kg)} kg${x.kind==='drop' ? (dropsOf(x).length ? dropsOf(x).map(d => ` ↘ ${d.reps ?? '–'} × ${fmtKg(d.kg)} kg`).join('') : ' · Drop') : ''}</span>`).join('')}
               </div>
             </div>`).join('')}
-          <button class="danger" type="button" data-del="${s.id}">Session löschen</button>
+          <button class="danger" type="button" data-del="${s.id}">Dieses Training löschen</button>
         </div>
       </details>`;
     }).join('');
@@ -1092,14 +1099,25 @@ input[type=date]{width:100%;display:block}
   $('#history').addEventListener('click', e => {
     const b = e.target.closest('[data-del]');
     if (!b) return;
-    // No native confirm() in this viewer, so use a two-step button.
-    if (!b.dataset.armed){
-      b.dataset.armed = '1';
-      b.textContent = 'Wirklich löschen? Nochmal tippen';
-      return;
-    }
-    data.sessions = data.sessions.filter(s => String(s.id) !== b.dataset.del);
-    persist(); renderHistory();
+    e.preventDefault(); e.stopPropagation();   // nicht auf- oder zuklappen
+    const ses = data.sessions.find(x => String(x.id) === b.dataset.del); if (!ses) return;
+    const bg = document.createElement('div'); bg.className = 'dlg-bg';
+    bg.innerHTML = `<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="del-t" aria-describedby="del-d">
+      <h2 id="del-t">Training löschen?</h2>
+      <p class="dlg-sub" id="del-d">${esc(ses.type)} vom ${esc(fmtDate(ses.date))} mit ${ses.exercises.length} ${ses.exercises.length === 1 ? 'Übung' : 'Übungen'} wird gelöscht und zählt nicht mehr im Fortschritt.</p>
+      <div class="dlg-btns"><button type="button" class="dlg-cancel">Abbrechen</button><button type="button" class="dlg-ok dlg-del">Löschen</button></div>
+    </div>`;
+    document.body.append(bg);
+    const close = () => bg.remove();
+    bg.addEventListener('click', ev => { if (ev.target === bg) close(); });
+    bg.querySelector('.dlg-cancel').addEventListener('click', close);
+    bg.querySelector('.dlg-del').addEventListener('click', () => {
+      // Maschineneinstellungen behalten
+      ses.exercises.forEach(ex => { if (ex.note){ data.notes = data.notes || {}; if (!data.notes[ex.name]) data.notes[ex.name] = ex.note; } });
+      data.sessions = data.sessions.filter(x => x !== ses);
+      persist(); close(); renderHistory(); renderEditor();
+      bsay(`Training vom ${fmtDate(ses.date)} gelöscht.`);
+    });
   });
 
   // ---- progress ----
