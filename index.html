@@ -388,6 +388,11 @@ input[type=date]{width:100%;display:block}
 .dlg-btns .dlg-ok{background:rgba(236,233,226,.62);border-color:rgba(255,255,255,.35);box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
 .seg{grid-template-columns:repeat(auto-fit,minmax(88px,1fr))}
 .menu-item[data-v="__new"]{color:rgba(255,255,255,.85);border-top:1px solid rgba(255,255,255,.14);border-radius:0 0 22px 22px;margin-top:4px}
+
+.danger.wide{width:100%;padding:13px 16px;margin-top:6px;font-size:15px}
+.wipe h2{margin-bottom:4px}
+.wipe .muted{margin:0 0 8px}
+.dlg-btns .dlg-del{color:#fff;background:linear-gradient(180deg,#FF5E55,#E2362C);border-color:rgba(255,255,255,.35);box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 8px 18px -8px rgba(226,54,44,.8)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -449,6 +454,11 @@ input[type=date]{width:100%;display:block}
     <textarea id="imp-text" placeholder="Oder Sicherungstext hier einfügen und auf „Text übernehmen“ tippen" aria-label="Sicherungstext"></textarea>
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
+  </div>
+  <div class="card wipe">
+    <h2>Alte Werte löschen</h2>
+    <p class="muted small">Löscht alle gespeicherten Trainings. Deine Übungen, Trainingstage und Maschineneinstellungen bleiben erhalten.</p>
+    <button class="danger wide" id="wipe" type="button">Alle Trainings löschen</button>
   </div>
 </section>
 
@@ -513,7 +523,7 @@ input[type=date]{width:100%;display:block}
       const e = data.sessions[k].exercises.find(x => x.name === name);
       if (e && e.note) return e.note;
     }
-    return '';
+    return (data.notes && data.notes[name]) || '';
   }
   // Trainingstage: Push und Pull fest, eigene Tage (z. B. Beine) kommen dazu
   const DAY_COLORS = ['#22B455','#F08A00','#E8467C','#1FA8D9','#D4A80A','#6B7280'];
@@ -565,6 +575,7 @@ input[type=date]{width:100%;display:block}
       if (ls.kind === 'drop' && s.kind !== 'drop'){ s.kind = 'drop'; s.drops = dropsOf(ls).map(d => ({ reps: d.reps ?? '', kg: d.kg ?? '' })); }
     });
     if (!ex.note && L.note) ex.note = L.note;
+    if (!ex.note) ex.note = lastNote(ex.name);
     return hit.date;
   }
   const shortDate = iso => new Date(iso + 'T00:00').toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit' });
@@ -688,6 +699,34 @@ input[type=date]{width:100%;display:block}
   }
   $('#s-type').addEventListener('click', e => openMenu(e.currentTarget, typeOpts(), data.draft.type, setType));
 
+  // ---- Alle Trainings löschen ----
+  function openWipe(){
+    const n = data.sessions.length;
+    if (!n){ bsay('Es sind keine Trainings gespeichert.'); return; }
+    const bg = document.createElement('div'); bg.className = 'dlg-bg';
+    bg.innerHTML = `<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="wipe-t" aria-describedby="wipe-d">
+      <h2 id="wipe-t">Alle Trainings löschen?</h2>
+      <p class="dlg-sub" id="wipe-d">${n} ${n === 1 ? 'gespeichertes Training wird' : 'gespeicherte Trainings werden'} endgültig gelöscht, auch im Fortschritt. Wenn du sie behalten willst, exportiere sie vorher unter „Sicherung“.</p>
+      <div class="dlg-btns"><button type="button" class="dlg-cancel">Abbrechen</button><button type="button" class="dlg-ok dlg-del">Löschen</button></div>
+    </div>`;
+    document.body.append(bg);
+    const close = () => bg.remove();
+    bg.addEventListener('click', e => { if (e.target === bg) close(); });
+    bg.querySelector('.dlg-cancel').addEventListener('click', close);
+    bg.querySelector('.dlg-del').addEventListener('click', () => {
+      // Maschineneinstellungen sichern, bevor die Trainings verschwinden
+      const notes = {};
+      data.sessions.forEach(x => x.exercises.forEach(e => { if (e.note) notes[e.name] = e.note; }));
+      data.notes = Object.assign(data.notes || {}, notes);
+      data.sessions = [];
+      persist(); close();
+      renderHistory(); renderEditor();
+      bsay(`${n} ${n === 1 ? 'Training' : 'Trainings'} gelöscht.`);
+    });
+    document.addEventListener('keydown', function esc(e){ if (e.key === 'Escape'){ close(); document.removeEventListener('keydown', esc); } });
+  }
+  $('#wipe').addEventListener('click', openWipe);
+
   // ---- Neuer Trainingstag ----
   function openNewDay(){
     const bg = document.createElement('div'); bg.className = 'dlg-bg';
@@ -792,6 +831,7 @@ input[type=date]{width:100%;display:block}
         </div>
       </section>`).join('');
     $('#last-all').hidden = !data.draft.exercises.some(e => lastEx(e.name));
+    document.querySelectorAll('#editor input').forEach(inp => inp.setAttribute('enterkeyhint', 'next'));
   }
   function saveDraft(){ persist(); }
 
@@ -823,6 +863,15 @@ input[type=date]{width:100%;display:block}
     saveDraft();
   });
 
+  // Enter auf der Tastatur springt ins nächste Feld (Wdh → kg → nächster Satz …)
+  $('#editor').addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
+    e.preventDefault();
+    const all = [...document.querySelectorAll('#editor input')].filter(x => x.offsetParent);
+    const next = all[all.indexOf(e.target) + 1];
+    if (next){ next.focus(); next.select && next.select(); next.scrollIntoView({ block:'center', behavior: reduce ? 'auto' : 'smooth' }); }
+    else e.target.blur();
+  });
   $('#editor').addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.target.classList.contains('ex-name')) { e.preventDefault(); e.target.blur(); }
   });
