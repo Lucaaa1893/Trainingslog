@@ -669,6 +669,52 @@ input[type=date]{width:100%;display:block}
 .achpop .ap span{font-size:30px}
 .achpop .ap b{display:block}
 .achpop .ap small{color:rgba(255,255,255,.8)}
+
+/* ===== Dunkelmodus, überarbeitet: tiefer, klarer, edles Glas ===== */
+:root[data-theme="dark"]{
+  --bg:#07080C; --grid:rgba(255,255,255,.028); --fg:#F4F6FA; --muted:#8E96A4; --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.12);
+  --glass:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.03));
+  --rim:inset 0 1px 0 rgba(255,255,255,.13), inset 0 0 0 1px rgba(255,255,255,.06);
+  --lift:0 24px 44px -24px rgba(0,0,0,.9);
+  --drop-btn:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.04));
+  --drop-shadow:inset 0 1px 0 rgba(255,255,255,.12), inset 0 0 0 1px rgba(255,255,255,.06);
+  --fill:rgba(255,255,255,.08);
+}
+:root[data-theme="dark"] .ambient{opacity:.75;filter:blur(60px);
+  background:
+    radial-gradient(34% 26% at 12% 10%, rgba(47,123,245,.38), transparent 70%),
+    radial-gradient(30% 24% at 92% 28%, rgba(147,88,242,.32), transparent 70%),
+    radial-gradient(30% 24% at 80% 88%, rgba(31,170,120,.18), transparent 70%),
+    radial-gradient(26% 22% at 15% 85%, rgba(240,138,0,.14), transparent 70%)}
+:root[data-theme="dark"] .card::before,:root[data-theme="dark"] details.session::before,:root[data-theme="dark"] details.p-ex::before,:root[data-theme="dark"] .p-tile::before,:root[data-theme="dark"] .tabs::before{opacity:.18}
+:root[data-theme="dark"] .card,:root[data-theme="dark"] details.session,:root[data-theme="dark"] details.p-ex,:root[data-theme="dark"] .p-tile,:root[data-theme="dark"] .empty,:root[data-theme="dark"] .pill{
+  background:radial-gradient(260px circle at var(--mx,25%) var(--my,-60px), rgba(255,255,255,.05), rgba(255,255,255,0) 70%), var(--glass);
+  border:1px solid rgba(255,255,255,.08);box-shadow:var(--rim), var(--lift)}
+:root[data-theme="dark"] .tabs{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+:root[data-theme="dark"] .lens{background:rgba(255,255,255,.11);box-shadow:inset 0 1px 0 rgba(255,255,255,.18), inset 0 0 0 1px rgba(255,255,255,.06)}
+:root[data-theme="dark"] .lens.grab,:root[data-theme="dark"] .lens.travel{background:radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,.2), rgba(255,255,255,.06) 60%, rgba(255,255,255,.1));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35), inset 0 0 0 1px rgba(255,255,255,.14), 0 12px 28px -10px rgba(0,0,0,.8)}
+:root[data-theme="dark"] .lens::after{background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,.03) 50%,rgba(255,255,255,.12))}
+:root[data-theme="dark"] .tab{color:#8E96A4}
+:root[data-theme="dark"] .tab[aria-selected="true"],:root[data-theme="dark"] .tab.hover{color:#7DB6FF}
+:root[data-theme="dark"] .ghost,:root[data-theme="dark"] .icon,:root[data-theme="dark"] .add-drop,:root[data-theme="dark"] .vchip:not(.on),:root[data-theme="dark"] .lvl-chip{
+  background:linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+:root[data-theme="dark"] .ghost{color:#7DB6FF}
+:root[data-theme="dark"] .ghost.alt{color:var(--fg)}
+:root[data-theme="dark"] .ghost.clr{color:#FF7A72}
+:root[data-theme="dark"] .icon{color:var(--fg)}
+:root[data-theme="dark"] .ex-top .icon.rm{color:#FF7A72}
+:root[data-theme="dark"] input,:root[data-theme="dark"] textarea,:root[data-theme="dark"] .select-btn,:root[data-theme="dark"] .kind-btn{
+  background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.07);box-shadow:inset 0 1px 2px rgba(0,0,0,.5)}
+:root[data-theme="dark"] input:focus,:root[data-theme="dark"] textarea:focus{background:rgba(0,0,0,.35);box-shadow:0 0 0 3px rgba(75,142,255,.45)}
+:root[data-theme="dark"] .btn{box-shadow:inset 0 1px 1px rgba(255,255,255,.35), 0 14px 30px -12px rgba(47,123,245,.7)}
+:root[data-theme="dark"] .num.chk{border-color:rgba(255,255,255,.18)}
+:root[data-theme="dark"] .chip,:root[data-theme="dark"] .vstats > div,:root[data-theme="dark"] .cdet,:root[data-theme="dark"] .lv-stat{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);box-shadow:none}
+:root[data-theme="dark"] .ex-name{border-bottom-color:rgba(255,255,255,.08)}
+:root[data-theme="dark"] .ex-name .chev{background:rgba(255,255,255,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.15)}
+:root[data-theme="dark"] .badge-i.ok{background:linear-gradient(160deg,rgba(255,200,80,.2),rgba(255,140,40,.08));box-shadow:inset 0 0 0 1px rgba(255,190,80,.3)}
+:root[data-theme="dark"] .mbar{background:rgba(255,255,255,.07)}
+:root[data-theme="dark"] .cd:not(.has):not(.future){color:#E6E9EF}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -743,7 +789,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 53</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 54</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -879,7 +925,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 53;
+  const MY_VERSION = 54;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
