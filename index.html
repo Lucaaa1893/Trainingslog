@@ -403,6 +403,19 @@ input[type=date]{width:100%;display:block}
 .s-right{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 .s-del{width:34px;height:34px;color:var(--bad)}
 .ver{text-align:center;font-size:12px;color:var(--muted);margin:24px 0 0}
+
+/* Wischen zum Löschen */
+.swipe-hint{font-size:12px;color:var(--muted);text-align:center;margin:0 0 10px}
+.swipe{position:relative;margin-bottom:12px;touch-action:pan-y;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.swipe details.session{position:relative;z-index:1;margin-bottom:0;transition:transform .5s var(--spring)}
+.swipe.drag details.session{transition:none}
+.swipe-act{position:absolute;top:0;right:0;bottom:0;width:86px;display:grid;place-items:center;z-index:0;opacity:var(--p,0);transition:opacity .3s}
+.swipe.drag .swipe-act{transition:none}
+.swipe-del{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;padding:0;color:#fff;border:1px solid rgba(255,255,255,.45);
+  background:var(--shine), linear-gradient(180deg,#FF5E55,#E2362C);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.6), inset 0 -6px 10px -6px rgba(255,255,255,.5), 0 10px 22px -8px rgba(226,54,44,.8);
+  transform:scale(calc(.55 + var(--p,0) * .45))}
+.swipe-del svg{width:22px;height:22px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -475,7 +488,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver">Version 23</p>
+<p class="ver">Version 24</p>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
@@ -1073,6 +1086,8 @@ input[type=date]{width:100%;display:block}
     $('#history').innerHTML = list.map(s => {
       const sets = s.exercises.reduce((n,e) => n + e.sets.length, 0);
       return `
+      <div class="swipe" data-id="${s.id}">
+      <div class="swipe-act"><button class="swipe-del" type="button" data-del="${s.id}" aria-label="Training vom ${esc(fmtDate(s.date))} löschen">${TRASH}</button></div>
       <details class="session">
         <summary>
           <div>
@@ -1081,7 +1096,6 @@ input[type=date]{width:100%;display:block}
           </div>
           <div class="s-right">
             <span class="badge ${esc(s.type)}"${['Push','Pull'].includes(s.type) ? '' : ` style="color:#fff;background:var(--shine), ${dayColor(s.type)}"`}>${esc(s.type)}</span>
-            <button class="icon rm s-del" type="button" data-del="${s.id}" aria-label="Training vom ${esc(fmtDate(s.date))} löschen">${TRASH}</button>
           </div>
         </summary>
         <div class="body">
@@ -1093,10 +1107,11 @@ input[type=date]{width:100%;display:block}
                 ${e.sets.map((x,j) => ` <span class="chip${x.kind==='drop'?' drop':''}">Satz ${j+1}: ${x.reps ?? '–'} × ${fmtKg(x.kg)} kg${x.kind==='drop' ? (dropsOf(x).length ? dropsOf(x).map(d => ` ↘ ${d.reps ?? '–'} × ${fmtKg(d.kg)} kg`).join('') : ' · Drop') : ''}</span>`).join('')}
               </div>
             </div>`).join('')}
-          <button class="danger" type="button" data-del="${s.id}">Dieses Training löschen</button>
         </div>
-      </details>`;
+      </details>
+      </div>`;
     }).join('');
+    $('#history').insertAdjacentHTML('afterbegin', '<p class="swipe-hint">Zum Löschen ein Training nach links wischen</p>');
   }
   $('#history').addEventListener('click', e => {
     const b = e.target.closest('[data-del]');
@@ -1121,6 +1136,50 @@ input[type=date]{width:100%;display:block}
       bsay(`Training vom ${fmtDate(ses.date)} gelöscht.`);
     });
   });
+
+  // ---- Wischen zum Löschen im Verlauf ----
+  const OPEN_X = -86;
+  let sw = null, suppressClick = false;
+  function setX(r, x, drag){
+    const d = r.querySelector('details.session'); r.dataset.x = x;
+    d.style.transform = x ? `translateX(${x}px)` : '';
+    r.style.setProperty('--p', Math.max(0, Math.min(1, x / OPEN_X)).toFixed(3));
+    r.classList.toggle('drag', !!drag);
+  }
+  function closeRows(except){ document.querySelectorAll('.swipe').forEach(r => { if (r !== except && +r.dataset.x) setX(r, 0); }); }
+  $('#history').addEventListener('pointerdown', e => {
+    const r = e.target.closest('.swipe'); if (!r || e.target.closest('.swipe-act')) return;
+    sw = { r, x0: e.clientX, y0: e.clientY, base: +r.dataset.x || 0, mode: null, id: e.pointerId };
+  });
+  $('#history').addEventListener('pointermove', e => {
+    if (!sw || e.pointerId !== sw.id) return;
+    const dx = e.clientX - sw.x0, dy = e.clientY - sw.y0;
+    if (!sw.mode){
+      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)){ sw.mode = 'h'; closeRows(sw.r); try { sw.r.setPointerCapture(e.pointerId); } catch(_){} }
+      else if (Math.abs(dy) > 8){ sw = null; return; }
+      else return;
+    }
+    let x = sw.base + dx;
+    if (x > 0) x *= 0.2;                                  // nach rechts nur leicht nachgeben
+    if (x < OPEN_X) x = OPEN_X + (x - OPEN_X) * 0.35;     // Gummiband-Effekt über das Ziel hinaus
+    setX(sw.r, x, true);
+  });
+  function endSwipe(){
+    if (!sw) return; const s = sw; sw = null;
+    if (s.mode !== 'h') return;
+    suppressClick = true; setTimeout(() => { suppressClick = false; }, 80);
+    setX(s.r, (+s.r.dataset.x) < OPEN_X / 2 ? OPEN_X : 0);
+  }
+  $('#history').addEventListener('pointerup', endSwipe);
+  $('#history').addEventListener('pointercancel', endSwipe);
+  // Antippen eines geöffneten Eintrags schließt ihn wieder, statt ihn aufzuklappen
+  $('#history').addEventListener('click', e => {
+    if (suppressClick){ e.preventDefault(); e.stopPropagation(); return; }
+    const r = e.target.closest('.swipe');
+    if (r && +r.dataset.x && !e.target.closest('.swipe-act')){ e.preventDefault(); e.stopPropagation(); setX(r, 0); }
+  }, true);
+  document.addEventListener('pointerdown', e => { if (!e.target.closest('.swipe') && !e.target.closest('.dlg-bg')) closeRows(); }, { passive:true });
+  $('#history').addEventListener('focusin', e => { const b = e.target.closest('.swipe-del'); if (b){ const r = b.closest('.swipe'); closeRows(r); setX(r, OPEN_X); } });
 
   // ---- progress ----
   const TREND_PCT = 1; // unter ±1 % zählt als gleich
