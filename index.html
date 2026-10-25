@@ -416,6 +416,29 @@ input[type=date]{width:100%;display:block}
   box-shadow:inset 0 1px 1px rgba(255,255,255,.6), inset 0 -6px 10px -6px rgba(255,255,255,.5), 0 10px 22px -8px rgba(226,54,44,.8);
   transform:scale(calc(.55 + var(--p,0) * .45))}
 .swipe-del svg{width:22px;height:22px}
+
+/* Volumen-Übersicht */
+.vol-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.vchips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.vchip{border:1px solid rgba(255,255,255,.8);border-radius:999px;padding:7px 13px;font:600 13px/1 var(--f-body);color:var(--fg);background:var(--drop-btn);box-shadow:var(--drop-shadow)}
+.vchip.on{color:#fff;background:var(--shine), var(--c, #3A3D45);border-color:rgba(255,255,255,.5)}
+.vstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.vstats > div{background:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.7);border-radius:16px;padding:10px;box-shadow:inset 0 1px 1px #fff;min-width:0}
+.vstats b{display:block;font:700 18px/1.1 var(--f-display);font-variant-numeric:tabular-nums;letter-spacing:-.01em;white-space:nowrap}
+.vstats b.up,.vtip .up{color:var(--good)} .vstats b.down,.vtip .down{color:var(--bad)}
+.vstats span{display:block;font-size:11px;color:var(--muted);margin-top:3px;line-height:1.2}
+.vwrap{position:relative;margin:0 -4px}
+.vscroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-left:4px}
+.vscroll::-webkit-scrollbar{display:none}
+.vscroll svg{display:block;max-width:none}
+.vy{position:absolute;left:4px;top:0;bottom:0;pointer-events:none;z-index:1;width:0}
+.vy span{position:absolute;left:0;font-size:10px;font-weight:600;color:var(--muted);background:rgba(255,255,255,.75);border-radius:999px;padding:1px 6px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.vbar{cursor:pointer;outline:none}
+.vbar:focus-visible rect:nth-child(2){stroke:var(--accent);stroke-width:2}
+.vtip{display:flex;gap:10px;align-items:flex-start;margin-top:8px;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.75);box-shadow:inset 0 1px 1px #fff;font-size:13px;line-height:1.4;font-variant-numeric:tabular-nums}
+.vtip .dotc{width:10px;height:10px;border-radius:50%;flex:0 0 10px;margin-top:4px}
+.vtip b{font-weight:600}
+.legend .ln{width:16px;height:2px;border-radius:2px;background:var(--fg);opacity:.55;vertical-align:3px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -488,7 +511,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver">Version 24</p>
+<p class="ver">Version 25</p>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
@@ -1218,29 +1241,80 @@ input[type=date]{width:100%;display:block}
       <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.6" fill="var(--accent)"></circle></svg>`;
   }
   const kg1 = n => (Math.round(n * 10) / 10).toString().replace('.', ',');
-  function volChart(list){
-    const L = list.slice(-12);
-    if (L.length < 1) return '';
-    const vols = L.map(s => s.exercises.reduce((a, e) => a + exStats(e).vol, 0));
-    const max = Math.max(...vols) || 1;
-    const W = 320, H = 130, top = 16, bottom = 22, left = 4;
-    const bw = (W - left * 2) / L.length;
+  // ---- Volumen-Übersicht ----
+  let volFilter = 'Alle', volSel = null;
+  const sesVol = s => s.exercises.reduce((a, e) => a + exStats(e).vol, 0);
+  const sesSets = s => s.exercises.reduce((a, e) => a + e.sets.length, 0);
+  const typeCol = t => t === 'Push' ? 'var(--accent)' : t === 'Pull' ? 'var(--accent2)' : dayColor(t);
+  const fmtVol = v => v >= 1000 ? (Math.round(v / 100) / 10).toLocaleString('de-DE') + ' t' : Math.round(v).toLocaleString('de-DE') + ' kg';
+  const fmtVolShort = v => v >= 1000 ? (Math.round(v / 100) / 10).toLocaleString('de-DE') + 't' : Math.round(v) + '';
+  // Vergleich immer mit dem vorherigen Training derselben Art (Push mit Push …)
+  function prevSame(all, s){ const i = all.indexOf(s); for (let k = i - 1; k >= 0; k--) if (all[k].type === s.type) return all[k]; return null; }
+  function volChart(all){
+    if (!all.length) return '';
+    const types = [...new Set(all.map(s => s.type))];
+    if (volFilter !== 'Alle' && !types.includes(volFilter)) volFilter = 'Alle';
+    const L = volFilter === 'Alle' ? all : all.filter(s => s.type === volFilter);
+    const vols = L.map(sesVol);
+    const total = vols.reduce((a, b) => a + b, 0), avg = total / L.length;
+    const last = L[L.length - 1], prev = prevSame(all, last);
+    const ch = prev && sesVol(prev) ? (sesVol(last) - sesVol(prev)) / sesVol(prev) * 100 : null;
+    const chTxt = ch == null ? '–' : (ch >= 0 ? '+' : '−') + Math.abs(Math.round(ch)) + ' %';
+    const chCls = ch == null ? '' : ch >= 1 ? 'up' : ch <= -1 ? 'down' : '';
+    // Diagramm: feste Balkenbreite, bei vielen Trainings seitlich scrollbar
+    const H = 190, top = 26, bottom = 30, padL = 50, padR = 6;
+    const cw = Math.max(260, ((document.querySelector('#progress') || {}).clientWidth || 340) - 36);
+    const BW = Math.max(32, Math.min(64, (cw - padL - padR) / L.length));
+    const W = Math.max(cw, padL + padR + L.length * BW);
+    const max = Math.max(...vols) || 1, plotH = H - top - bottom;
+    const yOf = v => H - bottom - (v / max) * plotH;
+    // gleitender Durchschnitt über 3 Trainings als Trendlinie
+    const trend = vols.map((v, i) => { const w = vols.slice(Math.max(0, i - 2), i + 1); return w.reduce((a, b) => a + b, 0) / w.length; });
+    const sel = L.find(s => String(s.id) === String(volSel)) || last;
+    const grid = [0.5, 1].map(f => `<line x1="0" x2="${W}" y1="${yOf(max * f).toFixed(1)}" y2="${yOf(max * f).toFixed(1)}" stroke="var(--line2)" stroke-dasharray="3 4"></line>`).join('')
+      + `<line x1="0" x2="${W}" y1="${H - bottom}" y2="${H - bottom}" stroke="var(--line2)"></line>`;
     const bars = L.map((s, i) => {
-      const h = (vols[i] / max) * (H - top - bottom);
-      const x = left + i * bw + bw * 0.18, w = bw * 0.64, y = H - bottom - h;
-      const col = s.type === 'Push' ? 'var(--accent)' : s.type === 'Pull' ? 'var(--accent2)' : dayColor(s.type);
-      const d = new Date(s.date + 'T00:00');
-      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(h,1).toFixed(1)}" rx="2" fill="${col}" opacity=".9"><title>${esc(fmtDate(s.date))}: ${Math.round(vols[i])} kg</title></rect>
-        <text x="${(x + w / 2).toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="9" fill="var(--muted)">${d.getDate()}.${d.getMonth() + 1}.</text>`;
+      const w = Math.min(34, BW - 10), x = padL + i * BW + (BW - w) / 2, y = yOf(vols[i]), h = Math.max(2, H - bottom - y);
+      const d = new Date(s.date + 'T00:00'), isSel = s === sel;
+      return `<g class="vbar${isSel ? ' sel' : ''}" data-vb="${s.id}" role="button" tabindex="0" aria-label="${esc(fmtDate(s.date))}, ${esc(s.type)}, ${fmtVol(vols[i])}">
+        <rect x="${x - 6}" y="${top - 18}" width="${w + 12}" height="${H - top + 18}" fill="transparent"></rect>
+        <rect x="${x}" y="${y.toFixed(1)}" width="${w}" height="${h.toFixed(1)}" rx="7" fill="${typeCol(s.type)}" opacity="${isSel ? 1 : .55}"></rect>
+        <text x="${x + w / 2}" y="${(y - 6).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="${isSel ? 700 : 500}" fill="${isSel ? 'var(--fg)' : 'var(--muted)'}">${fmtVolShort(vols[i])}</text>
+        <text x="${x + w / 2}" y="${H - 12}" text-anchor="middle" font-size="10" font-weight="${isSel ? 700 : 400}" fill="${isSel ? 'var(--fg)' : 'var(--muted)'}">${d.getDate()}.${d.getMonth() + 1}.</text>
+      </g>`;
     }).join('');
-    const maxLbl = `<text x="${left}" y="10" font-size="9" fill="var(--muted)">max. ${Math.round(max).toLocaleString('de-DE')} kg</text>
-      <line x1="${left}" x2="${W - left}" y1="${top}" y2="${top}" stroke="var(--line)" stroke-dasharray="2 3"></line>
-      <line x1="${left}" x2="${W - left}" y1="${H - bottom}" y2="${H - bottom}" stroke="var(--line)"></line>`;
-    return `<div class="card vol"><h2>Gesamtvolumen pro Session</h2>
-      <p class="muted small" style="margin:2px 0 8px">Summe aus Wiederholungen × Gewicht aller Sätze</p>
-      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Volumen der letzten ${L.length} Sessions">${maxLbl}${bars}</svg>
-      <div class="legend">${[...new Set(L.map(s => s.type))].map(t => `<span><i style="background:${t==='Push'?'var(--accent)':t==='Pull'?'var(--accent2)':dayColor(t)}"></i>${esc(t)}</span>`).join('')}</div></div>`;
+    const tp = trend.map((v, i) => `${(padL + i * BW + BW / 2).toFixed(1)},${yOf(v).toFixed(1)}`);
+    const trendSvg = L.length > 2 ? `<polyline points="${tp.join(' ')}" fill="none" stroke="var(--fg)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity=".55"></polyline>` : '';
+    const sv = sesVol(sel), sp = prevSame(all, sel), sch = sp && sesVol(sp) ? Math.round((sv - sesVol(sp)) / sesVol(sp) * 100) : null;
+    const chips = ['Alle', ...types].map(t => `<button type="button" class="vchip${t === volFilter ? ' on' : ''}" data-vf="${esc(t)}"${t !== 'Alle' ? ` style="--c:${typeCol(t)}"` : ''}>${esc(t)}</button>`).join('');
+    return `<div class="card vol">
+      <div class="vol-head"><h2>Volumen</h2><span class="muted small">Wdh × kg aller Sätze pro Training</span></div>
+      <div class="vchips" role="group" aria-label="Filter">${chips}</div>
+      <div class="vstats">
+        <div><b>${fmtVol(total)}</b><span>Gesamt · ${L.length} ${L.length === 1 ? 'Training' : 'Trainings'}</span></div>
+        <div><b>${fmtVol(avg)}</b><span>Ø pro Training</span></div>
+        <div><b class="${chCls}">${chTxt}</b><span>Letztes vs. davor</span></div>
+      </div>
+      <div class="vwrap">
+        <div class="vy" aria-hidden="true"><span style="top:${yOf(max) - 8}px">${fmtVol(max)}</span><span style="top:${yOf(max / 2) - 8}px">${fmtVol(max / 2)}</span></div>
+        <div class="vscroll"><svg width="${W}" height="${H}" style="width:${W}px;height:${H}px" viewBox="0 0 ${W} ${H}" role="img" aria-label="Volumen pro Training">${grid}${bars}${trendSvg}</svg></div>
+      </div>
+      <div class="vtip"><span class="dotc" style="background:${typeCol(sel.type)}"></span><div><b>${esc(fmtDate(sel.date))} · ${esc(sel.type)}</b><br>${fmtVol(sv)} · ${sel.exercises.length} ${sel.exercises.length === 1 ? 'Übung' : 'Übungen'} · ${sesSets(sel)} Sätze${sch == null ? '' : ` · <span class="${sch >= 1 ? 'up' : sch <= -1 ? 'down' : ''}">${sch >= 0 ? '+' : '−'}${Math.abs(sch)} %</span> zum ${esc(sel.type)} davor`}</div></div>
+      <div class="legend"><span><i class="ln"></i>Trend (Ø 3 Trainings)</span><span>Balken antippen</span></div>
+    </div>`;
   }
+  function refreshVol(keepScroll){
+    const el = document.querySelector('#progress .vol'); if (!el) return;
+    const sc = el.querySelector('.vscroll'), left = sc ? sc.scrollLeft : 0;
+    const all = [...data.sessions].sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id));
+    el.outerHTML = volChart(all);
+    const nsc = document.querySelector('#progress .vscroll'); if (nsc) nsc.scrollLeft = keepScroll ? left : nsc.scrollWidth;
+  }
+  $('#progress').addEventListener('click', e => {
+    const f = e.target.closest('[data-vf]'); if (f){ volFilter = f.dataset.vf; volSel = null; refreshVol(false); return; }
+    const b = e.target.closest('[data-vb]'); if (b){ volSel = b.dataset.vb; refreshVol(true); }
+  });
+  $('#progress').addEventListener('keydown', e => { const b = e.target.closest('[data-vb]'); if (b && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); volSel = b.dataset.vb; refreshVol(true); } });
   function renderProgress(){
     const list = [...data.sessions].sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id));
     if (!list.length){
@@ -1296,6 +1370,7 @@ input[type=date]{width:100%;display:block}
       </div>
       ${volChart(list)}
       ${[...dayNames, 'Sonstiges'].map(t => sec(esc(t), groups[t])).join('')}`;
+    const vsc = document.querySelector('#progress .vscroll'); if (vsc) vsc.scrollLeft = vsc.scrollWidth;
   }
 
   // ---- init ----
