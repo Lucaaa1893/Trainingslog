@@ -603,7 +603,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 48</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 49</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -739,7 +739,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 48;
+  const MY_VERSION = 49;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -837,7 +837,7 @@ input[type=date]{width:100%;display:block}
     if (!lens || idx < 0) return;
     const prev = lens.dataset.idx;
     lens.style.translate = `${idx * 100}% 0`;
-    if (prev != null && +prev !== idx && !reduce){
+    if (false && prev != null && +prev !== idx && !reduce){   // Glasblase nur noch beim Wischen
       // wie iOS: Pille wird beim Wechseln zur großen Glasblase, gleitet rüber und schrumpft wieder
       lens.style.transformOrigin = `${idx * 50}% 50%`;
       lens.classList.add('travel'); kickMag();
@@ -1013,17 +1013,19 @@ input[type=date]{width:100%;display:block}
     tabDrag = { id: e.pointerId, x0: e.clientX, moved: false, w, left: r.left };
     lastTabTouch = performance.now();
     try { tabBar.setPointerCapture(e.pointerId); } catch(_){}
-    lens.style.transformOrigin = `${(+lens.dataset.idx || 0) * 50}% 50%`;
-    lens.classList.add('grab');
-    tabBar.classList.add('grabbing');
-    kickMag();
-    hoverTab(+lens.dataset.idx || 0);
+    // Glas-Effekt erst, wenn wirklich gewischt wird – beim reinen Tippen nicht
   });
   tabBar.addEventListener('pointermove', e => {
     if (!tabDrag || e.pointerId !== tabDrag.id) return;
     if (!tabDrag.moved && Math.abs(e.clientX - tabDrag.x0) < 6) return;
-    tabDrag.moved = true;
     const lens = $('#lens');
+    if (!tabDrag.moved){
+      tabDrag.moved = true;
+      lens.style.transformOrigin = `${(+lens.dataset.idx || 0) * 50}% 50%`;
+      lens.classList.add('grab');
+      tabBar.classList.add('grabbing');
+      kickMag();
+    }
     lens.classList.add('drag');
     let x = e.clientX - tabDrag.left - 4 - tabDrag.w / 2;
     const maxX = tabDrag.w * 2;
