@@ -711,7 +711,6 @@ input[type=date]{width:100%;display:block}
       <button class="ghost alt" id="last-all" type="button" hidden>↺ Alle letzten</button>
       <button class="ghost alt clr" id="clear-all" type="button">Alle leeren</button>
     </div>
-    <div class="timer" id="timer" hidden><span class="dotlive" aria-hidden="true"></span>Training läuft · <span id="timer-t">0:00</span></div>
   </div>
 
   <div id="editor"></div>
@@ -744,7 +743,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 52</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 53</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -880,7 +879,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 52;
+  const MY_VERSION = 53;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
