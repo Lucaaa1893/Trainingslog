@@ -371,6 +371,23 @@ input.press,textarea.press{animation:field .55s var(--spring)}
 /* Nur das Feld selbst öffnet die Auswahl */
 .meta-row .lbl{pointer-events:none;width:max-content;max-width:100%}
 input[type=date]{width:100%;display:block}
+
+/* Neuer Trainingstag: Dialog im Pop-up-Stil */
+.dlg-bg{position:fixed;inset:0;z-index:70;background:rgba(20,25,35,.18);display:grid;place-items:center;padding:20px;animation:fade .2s ease}
+.dlg{width:min(340px,100%);border-radius:30px;padding:20px 18px 16px;color:#fff;background:rgba(104,106,113,.9);
+  -webkit-backdrop-filter:blur(30px) saturate(170%);backdrop-filter:blur(30px) saturate(170%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28), 0 24px 60px -12px rgba(0,0,0,.4);animation:menu-in .5s var(--spring)}
+.dlg h2{color:#fff;margin-bottom:6px}
+.dlg-sub{margin:0 0 14px;font-size:14px;color:rgba(255,255,255,.75)}
+.dlg input{color:#fff;background:rgba(255,255,255,.16);border:0;border-radius:999px;padding:12px 16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.15)}
+.dlg input::placeholder{color:rgba(255,255,255,.6)}
+.dlg input:focus{background:rgba(255,255,255,.24);box-shadow:0 0 0 2px rgba(255,255,255,.35);transform:none}
+.dlg-err{min-height:18px;margin:8px 4px 4px;font-size:13px;color:#FFD0CC}
+.dlg-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dlg-btns button{border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:13px;font:600 16px/1 var(--f-body);color:#fff;background:rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.dlg-btns .dlg-ok{background:rgba(236,233,226,.62);border-color:rgba(255,255,255,.35);box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+.seg{grid-template-columns:repeat(auto-fit,minmax(88px,1fr))}
+.menu-item[data-v="__new"]{color:rgba(255,255,255,.85);border-top:1px solid rgba(255,255,255,.14);border-radius:0 0 22px 22px;margin-top:4px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -498,8 +515,21 @@ input[type=date]{width:100%;display:block}
     }
     return '';
   }
+  // Trainingstage: Push und Pull fest, eigene Tage (z. B. Beine) kommen dazu
+  const DAY_COLORS = ['#22B455','#F08A00','#E8467C','#1FA8D9','#D4A80A','#6B7280'];
+  function days(){
+    const own = (data.days || []).map((d, k) => ({ name: d.name, color: d.color || DAY_COLORS[k % DAY_COLORS.length] }));
+    return [{ name:'Push', color:'#2F7BF5' }, { name:'Pull', color:'#9358F2' }, ...own];
+  }
+  const dayColor = t => (days().find(d => d.name === t) || { color:'#9AA3B2' }).color;
+  // Übungsliste eines Tages: Push/Pull immer in der ursprünglichen Reihenfolge,
+  // eigene Tage in der Reihenfolge, in der ihre Übungen angelegt wurden
+  function templateFor(type){
+    if (TEMPLATES[type]) return TEMPLATES[type].slice();
+    return (data.custom || []).filter(c => typeof c === 'object' && c.cat === type).map(c => c.name);
+  }
   function fromTemplate(type){
-    return (TEMPLATES[type] || []).map(n => ({ name: n, note: lastNote(n), sets: [{reps:'',kg:''},{reps:'',kg:''},{reps:'',kg:''}] }));
+    return templateFor(type).map(n => ({ name: n, note: lastNote(n), sets: [{reps:'',kg:''},{reps:'',kg:''},{reps:'',kg:''}] }));
   }
   function untouched(d){
     return d.exercises.every(e => e.sets.every(s => s.reps === '' && s.kg === '' && s.kind !== 'drop'));
@@ -641,14 +671,51 @@ input[type=date]{width:100%;display:block}
   }
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && menuState) closeMenu(); });
   addEventListener('resize', () => closeMenu(true));
-  const TYPE_OPTS = [{value:'Push',label:'Push',color:'#2F7BF5'},{value:'Pull',label:'Pull',color:'#9358F2'},{value:'Sonstiges',label:'Sonstiges',color:'#9AA3B2'}];
+  const typeOpts = () => [...days().map(d => ({ value:d.name, label:d.name, color:d.color })), { value:'Sonstiges', label:'Sonstiges', color:'#9AA3B2' }, { value:'__new', label:'+ Neuer Trainingstag' }];
+  const hasData = e => e.note || e.sets.some(x => x.reps !== '' || x.kg !== '' || x.kind === 'drop');
   const KIND_OPTS = [{value:'',label:'Normal'},{value:'drop',label:'Dropsatz',color:'#F08A00'}];
   function setType(v){
+    if (v === '__new'){ openNewDay(); return; }
+    const old = data.draft.exercises;
     data.draft.type = v;
-    if (untouched(data.draft)) data.draft.exercises = fromTemplate(v);
+    if (v !== 'Sonstiges'){
+      // Übungen des Tages in fester Reihenfolge; schon Eingetragenes wird übernommen
+      const plan = fromTemplate(v).map(t => { const had = old.find(e => e.name === t.name && hasData(e)); return had || t; });
+      const extra = old.filter(e => hasData(e) && !plan.some(p => p.name === e.name));
+      data.draft.exercises = [...plan, ...extra];
+    } else if (untouched(data.draft)) data.draft.exercises = [];
     saveDraft(); renderMeta(); renderEditor();
   }
-  $('#s-type').addEventListener('click', e => openMenu(e.currentTarget, TYPE_OPTS, data.draft.type, setType));
+  $('#s-type').addEventListener('click', e => openMenu(e.currentTarget, typeOpts(), data.draft.type, setType));
+
+  // ---- Neuer Trainingstag ----
+  function openNewDay(){
+    const bg = document.createElement('div'); bg.className = 'dlg-bg';
+    bg.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-t">
+      <h2 id="dlg-t">Neuer Trainingstag</h2>
+      <p class="dlg-sub">Zum Beispiel Beine oder Ganzkörper. Übungen fügst du danach mit „+ Übung hinzufügen“ hinzu.</p>
+      <input id="dlg-name" type="text" placeholder="Name, z. B. Beine" autocomplete="off" enterkeyhint="done" maxlength="24" aria-label="Name des Trainingstags">
+      <p class="dlg-err" id="dlg-err" role="alert"></p>
+      <div class="dlg-btns"><button type="button" class="dlg-cancel">Abbrechen</button><button type="button" class="dlg-ok">Anlegen</button></div>
+    </div>`;
+    document.body.append(bg);
+    const inp = bg.querySelector('#dlg-name'); setTimeout(() => inp.focus(), 60);
+    const close = () => bg.remove();
+    const ok = () => {
+      const n = inp.value.trim();
+      if (!n){ bg.querySelector('#dlg-err').textContent = 'Bitte einen Namen eingeben.'; return; }
+      if (days().some(d => d.name.toLowerCase() === n.toLowerCase()) || n.toLowerCase() === 'sonstiges'){ bg.querySelector('#dlg-err').textContent = 'Diesen Trainingstag gibt es schon.'; return; }
+      data.days = data.days || [];
+      data.days.push({ name:n, color: DAY_COLORS[data.days.length % DAY_COLORS.length] });
+      close();
+      setType(n);
+      say(`Trainingstag „${n}“ angelegt. Füge jetzt seine Übungen hinzu.`);
+    };
+    bg.addEventListener('click', e => { if (e.target === bg) close(); });
+    bg.querySelector('.dlg-cancel').addEventListener('click', close);
+    bg.querySelector('.dlg-ok').addEventListener('click', ok);
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); ok(); } if (e.key === 'Escape') close(); });
+  }
   function setKind(i, j, v){
     const set = data.draft.exercises[i].sets[j];
     set.kind = v;
@@ -840,11 +907,11 @@ input[type=date]{width:100%;display:block}
     if (raw && !exact){
       const def = defaultCat();
       html += `<div class="new-box"><span class="nm">+ „${esc(raw)}“ neu anlegen als</span>
-        <div class="seg" role="group" aria-label="Trainingstag für die neue Übung">${['Push','Pull','Eigene'].map(c =>
+        <div class="seg" role="group" aria-label="Trainingstag für die neue Übung">${[...days().map(d => d.name),'Eigene'].map(c =>
           `<button type="button" class="${c === def ? 'def' : ''}" data-new="${esc(raw)}" data-cat="${c}">${c === 'Eigene' ? 'Sonstige' : c}</button>`).join('')}</div></div>`;
     }
     let any = false;
-    ['Push','Pull','Eigene'].forEach(cat => {
+    [...days().map(d => d.name),'Eigene'].forEach(cat => {
       const names = [...all].filter(([n, c]) => c === cat && (!q || n.toLowerCase().includes(q))).map(([n]) => n);
       if (!names.length) return;
       any = true;
@@ -857,7 +924,7 @@ input[type=date]{width:100%;display:block}
     if (!any && !raw) html += `<div class="pick-none">Noch keine Übungen.</div>`;
     $('#sheet-list').innerHTML = html;
   }
-  const defaultCat = () => ['Push','Pull'].includes(data.draft.type) ? data.draft.type : 'Eigene';
+  const defaultCat = () => days().some(d => d.name === data.draft.type) ? data.draft.type : 'Eigene';
   function choose(name, cat){
     name = (name || '').trim(); if (!name) return;
     if (!allExercises().has(name)) { data.custom = data.custom || []; data.custom.push({ name, cat: cat || defaultCat() }); }
@@ -927,7 +994,7 @@ input[type=date]{width:100%;display:block}
             <div class="display" style="font-size:20px">${esc(fmtDate(s.date))}</div>
             <div class="muted small">${s.exercises.length} ${s.exercises.length===1?'Übung':'Übungen'} · ${sets} ${sets===1?'Satz':'Sätze'}${(()=>{const d=s.exercises.reduce((n,e)=>n+e.sets.filter(x=>x.kind==='drop').length,0);return d?` · ${d} Drop`:''})()}</div>
           </div>
-          <span class="badge ${esc(s.type)}">${esc(s.type)}</span>
+          <span class="badge ${esc(s.type)}"${['Push','Pull'].includes(s.type) ? '' : ` style="color:#fff;background:var(--shine), ${dayColor(s.type)}"`}>${esc(s.type)}</span>
         </summary>
         <div class="body">
           ${s.exercises.map(e => `
@@ -1003,7 +1070,7 @@ input[type=date]{width:100%;display:block}
     const bars = L.map((s, i) => {
       const h = (vols[i] / max) * (H - top - bottom);
       const x = left + i * bw + bw * 0.18, w = bw * 0.64, y = H - bottom - h;
-      const col = s.type === 'Push' ? 'var(--accent)' : s.type === 'Pull' ? 'var(--accent2)' : 'var(--muted)';
+      const col = s.type === 'Push' ? 'var(--accent)' : s.type === 'Pull' ? 'var(--accent2)' : dayColor(s.type);
       const d = new Date(s.date + 'T00:00');
       return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(h,1).toFixed(1)}" rx="2" fill="${col}" opacity=".9"><title>${esc(fmtDate(s.date))}: ${Math.round(vols[i])} kg</title></rect>
         <text x="${(x + w / 2).toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="9" fill="var(--muted)">${d.getDate()}.${d.getMonth() + 1}.</text>`;
@@ -1014,7 +1081,7 @@ input[type=date]{width:100%;display:block}
     return `<div class="card vol"><h2>Gesamtvolumen pro Session</h2>
       <p class="muted small" style="margin:2px 0 8px">Summe aus Wiederholungen × Gewicht aller Sätze</p>
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Volumen der letzten ${L.length} Sessions">${maxLbl}${bars}</svg>
-      <div class="legend"><span><i style="background:var(--accent)"></i>Push</span><span><i style="background:var(--accent2)"></i>Pull</span></div></div>`;
+      <div class="legend">${[...new Set(L.map(s => s.type))].map(t => `<span><i style="background:${t==='Push'?'var(--accent)':t==='Pull'?'var(--accent2)':dayColor(t)}"></i>${esc(t)}</span>`).join('')}</div></div>`;
   }
   function renderProgress(){
     const list = [...data.sessions].sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id));
@@ -1028,8 +1095,9 @@ input[type=date]{width:100%;display:block}
       const g = byName.get(e.name); g.type = s.type;
       g.rows.push(Object.assign({ date: s.date }, exStats(e)));
     }));
-    const order = n => { for (const t of ['Push','Pull']) { const i = TEMPLATES[t].indexOf(n); if (i >= 0) return (t === 'Push' ? 0 : 100) + i; } return 1000; };
-    const groups = { Push: [], Pull: [], Sonstiges: [] };
+    const dayNames = days().map(d => d.name);
+    const order = n => { for (let k = 0; k < dayNames.length; k++) { const i = templateFor(dayNames[k]).indexOf(n); if (i >= 0) return k * 100 + i; } return 10000; };
+    const groups = {}; [...dayNames, 'Sonstiges'].forEach(t => groups[t] = []);
     let up = 0, same = 0, down = 0;
     [...byName.values()].sort((a, b) => order(a.name) - order(b.name) || a.name.localeCompare(b.name)).forEach(g => {
       const r = g.rows, last = r[r.length - 1], prev = r[r.length - 2];
@@ -1069,7 +1137,7 @@ input[type=date]{width:100%;display:block}
         <div class="p-tile down"><b>${down}</b><span>Schlechter</span></div>
       </div>
       ${volChart(list)}
-      ${sec('Push', groups.Push)}${sec('Pull', groups.Pull)}${sec('Sonstiges', groups.Sonstiges)}`;
+      ${[...dayNames, 'Sonstiges'].map(t => sec(esc(t), groups[t])).join('')}`;
   }
 
   // ---- init ----
