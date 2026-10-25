@@ -649,6 +649,26 @@ input[type=date]{width:100%;display:block}
 .xpgain .lvup{margin-top:8px;font-weight:800;color:#FFD166}
 :root[data-theme="dark"] .lv-stat{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1);box-shadow:none}
 :root[data-theme="dark"] .lvl-chip{border-color:rgba(255,255,255,.12)}
+:root[data-theme="dark"] .an-bar{background:rgba(255,255,255,.12)}
+
+/* Erfolge */
+.ach-next{display:grid;gap:10px}
+.an{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:center}
+.an-ic{font-size:24px;text-align:center}
+.an-m{min-width:0}
+.an-t{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.an-t b{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.an-t span{color:var(--muted);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.an-bar{height:8px;border-radius:999px;background:rgba(30,40,60,.1);overflow:hidden;margin-top:5px}
+.an-bar i{display:block;height:100%;border-radius:999px;background:var(--shine), linear-gradient(90deg,#FFC24B,#F08A00)}
+.achpop{margin:0 0 12px}
+.achpop h2{margin-bottom:8px}
+.achpop .ap{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;margin-top:6px;background:linear-gradient(160deg,rgba(255,215,90,.32),rgba(255,160,60,.14));box-shadow:inset 0 0 0 1px rgba(255,200,90,.5);animation:apin .6s var(--spring) both}
+.achpop .ap:nth-child(3){animation-delay:.08s}.achpop .ap:nth-child(4){animation-delay:.16s}
+@keyframes apin{from{transform:scale(.6);opacity:0}}
+.achpop .ap span{font-size:30px}
+.achpop .ap b{display:block}
+.achpop .ap small{color:rgba(255,255,255,.8)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -662,7 +682,6 @@ input[type=date]{width:100%;display:block}
   <div>
     <h1>Trainingslog</h1>
     <div class="kicker">Push · Pull · Fortschritt</div>
-    <button class="lvl-chip" id="lvl-chip" type="button" aria-label="Level ansehen">Lv 1</button>
   </div>
   <div class="hdr-right"><button class="icon" id="theme" type="button" aria-label="Dunklen Modus einschalten">☾</button><span class="pill" id="net">Online</span></div>
 </header>
@@ -725,7 +744,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 51</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 52</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -861,7 +880,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 51;
+  const MY_VERSION = 52;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1467,7 +1486,7 @@ input[type=date]{width:100%;display:block}
       return;
     }
     const before = data.sessions.slice();
-    const xpB = xpInfo(before);
+    const achB = unlockedIds(before);
     const ses = { id: Date.now(), date: d.date, type: d.type, exercises };
     if (d.start) ses.duration = Math.max(1, Math.round((Date.now() - d.start) / 60000));
     const prs = [];
@@ -1478,9 +1497,8 @@ input[type=date]{width:100%;display:block}
     renderMeta(); renderEditor(); updateTimer();
     say(ok ? `Session gespeichert${ses.duration ? ' · ' + fmtDur(ses.duration) : ''}.` : 'Session angezeigt, aber der Browser speichert gerade nicht.', !ok);
     showTab('hist');
-    const xpA = xpInfo(data.sessions);
-    updateLevelChip();
-    showCard(ses, prs, { gain: xpA.total - xpB.total, b: xpB, a: xpA });
+    const newAch = achievements(achStats(data.sessions)).filter(a => a.val >= a.goal && !achB.has(a.id));
+    showCard(ses, prs, newAch);
   });
 
   // ---- history ----
@@ -1747,7 +1765,7 @@ input[type=date]{width:100%;display:block}
     };
     const sec = (t, arr) => arr.length ? `<div class="p-group">${t}</div>${arr.map(row).join('')}` : '';
     $('#progress').innerHTML = `
-      ${levelCard(list)}
+      ${achCard(list)}
       <p class="muted small" style="margin:0 0 8px">Vergleich: letzte Session gegen die davor, pro Übung</p>
       <div class="p-sum">
         <div class="p-tile up"><b>${up}</b><span>Besser</span></div>
@@ -1833,7 +1851,61 @@ input[type=date]{width:100%;display:block}
     const i = xpInfo(data.sessions), pct = Math.min(100, i.into / i.need * 100);
     c.innerHTML = `<b>Lv ${i.level}</b> ${esc(i.title)}<i style="--p:${pct.toFixed(1)}%"></i>`;
   }
-  $('#lvl-chip').addEventListener('click', () => { showTab('prog'); setTimeout(() => { const el = $('#lvlcard'); if (el) el.scrollIntoView({ block:'start', behavior: reduce ? 'auto' : 'smooth' }); }, 60); });
+  if ($('#lvl-chip')) $('#lvl-chip').addEventListener('click', () => { showTab('prog'); setTimeout(() => { const el = $('#lvlcard'); if (el) el.scrollIntoView({ block:'start', behavior: reduce ? 'auto' : 'smooth' }); }, 60); });
+
+
+  // ===================== Erfolge (Meilensteine) =====================
+  function achStats(sessions){
+    const list = [...sessions].sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id));
+    const best = new Map(), weekCount = new Map(), exCount = new Map(), typeCount = new Map();
+    let prs = 0, drops = 0, maxVol = 0, totalVol = 0, sets = 0;
+    list.forEach(s => {
+      typeCount.set(s.type, (typeCount.get(s.type) || 0) + 1);
+      s.exercises.forEach(e => {
+        const st = exStats(e); sets += st.sets;
+        if (st.sets) exCount.set(e.name, (exCount.get(e.name) || 0) + 1);
+        drops += e.sets.filter(x => x.kind === 'drop').length;
+        if (st.best != null){ const b = best.get(e.name); if (b != null && st.best > b + 0.01) prs++; if (b == null || st.best > b) best.set(e.name, st.best); }
+      });
+      const wk = weekKey(s.date); weekCount.set(wk, (weekCount.get(wk) || 0) + 1);
+      const v = s.exercises.reduce((a, e) => a + exStats(e).vol, 0); maxVol = Math.max(maxVol, v); totalVol += v;
+    });
+    // längste Serie an Wochen mit mindestens 2 Trainings
+    const weeks = [...weekCount.entries()].filter(([, n]) => n >= 2).map(([k]) => k).sort();
+    let streak = 0, run = 0, prev = null;
+    weeks.forEach(k => { const d = new Date(k + 'T00:00'); if (prev){ const p = new Date(prev + 'T00:00'); p.setDate(p.getDate() + 7); run = isoDay(p) === k ? run + 1 : 1; } else run = 1; streak = Math.max(streak, run); prev = k; });
+    return { count: list.length, prs, drops, maxVol, totalVol, sets, streak, exCount, typeCount };
+  }
+  const tons = v => (v / 1000).toLocaleString('de-DE', { maximumFractionDigits: 1 });
+  function achievements(st){
+    const A = [];
+    const tier = (key, icon, goals, title, desc, val) => goals.forEach(g => A.push({ id: key + ':' + g, icon, title: title(g), desc: desc(g), val, goal: g }));
+    tier('tr', '🏋️', [1, 5, 10, 25, 50, 100, 200, 365], g => g === 1 ? 'Erstes Training' : `${g} Trainings`, g => g === 1 ? 'Dein erstes Training gespeichert' : `${g}-mal trainiert`, st.count);
+    tier('pr', '🏆', [1, 10, 25, 50, 100], g => g === 1 ? 'Erster Rekord' : `${g} Rekorde`, g => `${g} ${g === 1 ? 'Bestwert' : 'Bestwerte'} geschlagen`, st.prs);
+    tier('wk', '🔥', [2, 4, 8, 12, 26], g => `${g} Wochen am Stück`, g => `${g} Wochen in Folge mindestens 2 Trainings`, st.streak);
+    tier('vm', '🚛', [1000, 5000, 10000], g => `${tons(g)} t in einem Training`, g => `${tons(g)} Tonnen Volumen in einer Session`, st.maxVol);
+    tier('vt', '🌍', [10000, 50000, 100000, 500000, 1000000], g => `${tons(g)} t insgesamt`, g => `${tons(g)} Tonnen Volumen bewegt`, st.totalVol);
+    tier('st', '💪', [100, 500, 1000, 2500, 5000], g => `${g.toLocaleString('de-DE')} Sätze`, g => `${g.toLocaleString('de-DE')} Arbeitssätze gemacht`, st.sets);
+    tier('dr', '💧', [10, 50, 100], g => `${g} Dropsätze`, g => `${g} Dropsätze durchgezogen`, st.drops);
+    st.typeCount.forEach((n, t) => tier('ty-' + t, '📅', [10, 25, 50, 100], g => `${g}× ${t}`, g => `${g} ${t}-Trainings`, n));
+    st.exCount.forEach((n, name) => tier('ex-' + name, '⭐', [10, 30, 50, 100], g => `${name} ${g}×`, g => `${name} ${g}-mal gemacht`, n));
+    return A;
+  }
+  const unlockedIds = sessions => new Set(achievements(achStats(sessions)).filter(a => a.val >= a.goal).map(a => a.id));
+  function achCard(all){
+    const A = achievements(achStats(all)), done = A.filter(a => a.val >= a.goal);
+    // nächste Ziele: pro Reihe das kleinste noch offene, sortiert nach Fortschritt
+    const firstOpen = new Map(); A.filter(a => a.val < a.goal).forEach(a => { const k = a.id.split(':')[0]; if (!firstOpen.has(k)) firstOpen.set(k, a); });
+    const next = [...firstOpen.values()]
+      .map(a => Object.assign(a, { pct: Math.min(99, a.val / a.goal * 100) })).sort((a, b) => b.pct - a.pct).slice(0, 4);
+    const fmtVal = a => a.id.startsWith('v') ? tons(a.val) + ' / ' + tons(a.goal) + ' t' : `${Math.floor(a.val).toLocaleString('de-DE')} / ${a.goal.toLocaleString('de-DE')}`;
+    return `<div class="card achcard" id="achcard">
+      <div class="vol-head"><h2>Erfolge</h2><span class="muted small">${done.length} freigeschaltet</span></div>
+      ${next.length ? `<div class="ach-next">${next.map(a => `<div class="an"><span class="an-ic">${a.icon}</span><div class="an-m"><div class="an-t"><b>${esc(a.title)}</b><span>${fmtVal(a)}</span></div><div class="an-bar"><i style="width:${a.pct.toFixed(1)}%"></i></div></div></div>`).join('')}</div>` : ''}
+      ${done.length ? `<details class="lv-more"><summary>Freigeschaltete Erfolge ansehen (${done.length})</summary>
+        <div class="badges">${done.slice().reverse().map(a => `<div class="badge-i ok" title="${esc(a.desc)}"><span>${a.icon}</span><b>${esc(a.title)}</b><small>${esc(a.desc)}</small></div>`).join('')}</div></details>` : '<p class="muted small" style="margin:6px 0 0">Speichere dein erstes Training für den ersten Erfolg.</p>'}
+    </div>`;
+  }
 
   // ===================== Neue Funktionen (v50) =====================
   const KIND_LABEL = { '': 'Normal', drop: 'Drop', warm: 'Aufw.' };
@@ -1942,8 +2014,6 @@ input[type=date]{width:100%;display:block}
     x.font = `600 40px ${F}`; x.fillStyle = '#5A6170'; x.fillText(fmtDate(ses.date), 80, 262);
     rr(x, 80, 300, x.measureText(ses.type).width + 120, 84, 42); x.fillStyle = col; x.fill();
     x.fillStyle = '#fff'; x.font = `700 46px ${F}`; x.fillText(ses.type, 140, 358);
-    { const li = xpInfo(data.sessions.filter(z => (z.date + z.id) <= (ses.date + ses.id))); const lx = 80 + x.measureText(ses.type).width + 150;
-      x.font = `700 40px ${F}`; x.fillStyle = '#15171B'; x.fillText(`Level ${li.level} · ${li.title}`, lx, 358); }
     // Kennzahlen
     const sets = ses.exercises.reduce((n, e) => n + e.sets.filter(isWork).length, 0);
     const vol = ses.exercises.reduce((a, e) => a + exStats(e).vol, 0);
@@ -1968,9 +2038,7 @@ input[type=date]{width:100%;display:block}
   }
   function showCard(ses, prs, xp){
     const c = makeCard(ses, prs), url = c.toDataURL('image/png');
-    const lvUp = xp && xp.a.level > xp.b.level;
-    const fromP = xp ? (lvUp ? 0 : xp.b.into / xp.b.need * 100) : 0, toP = xp ? xp.a.into / xp.a.need * 100 : 0;
-    const xpHtml = xp ? `<div class="xpgain" style="--from:${fromP.toFixed(1)}%;--to:${toP.toFixed(1)}%"><div class="xg-top"><span>Level ${xp.a.level} · ${esc(xp.a.title)}</span><b>+${fmtXP(xp.gain)} XP</b></div><div class="xg-bar"><i></i></div>${lvUp ? `<div class="lvup">⬆️ Level-Up! Du bist jetzt Level ${xp.a.level} – ${esc(xp.a.title)}</div>` : ''}</div>` : '';
+    const xpHtml = xp && xp.length ? `<div class="achpop"><h2>🏅 Erfolg freigeschaltet!</h2>${xp.map(a => `<div class="ap"><span>${a.icon}</span><div><b>${esc(a.title)}</b><small>${esc(a.desc)}</small></div></div>`).join('')}</div>` : '';
     const bg = document.createElement('div'); bg.className = 'dlg-bg';
     bg.innerHTML = `<div class="dlg cardlg" role="dialog" aria-modal="true" aria-labelledby="sc-t">
       ${xpHtml}
