@@ -465,10 +465,10 @@ input[type=date]{width:100%;display:block}
 
 /* Tab-Linse: iOS-Liquid-Glass beim Drücken und Ziehen */
 .tabs{touch-action:pan-y;-webkit-user-select:none;user-select:none}
-.tabs.grabbing{overflow:visible}
-.lens{transition:transform .5s cubic-bezier(.3,1.3,.5,1), scale .45s var(--spring), box-shadow .3s ease, background .3s ease}
+.tabs.grabbing{overflow:hidden}
+.lens{transition:translate .5s cubic-bezier(.3,1.3,.5,1), scale .45s var(--spring), box-shadow .3s ease, background .3s ease}
 .lens.drag{transition:scale .45s var(--spring), box-shadow .3s ease, background .3s ease}
-.lens.grab{scale:1.16 1.32;
+.lens.grab{scale:1.07 1.1;
   background:radial-gradient(120% 120% at 30% 0%, rgba(255,255,255,.85), rgba(255,255,255,.35) 50%, rgba(255,255,255,.45));
   box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.95), inset 2px 3px 0 -1px #fff, inset 0 -8px 12px -8px rgba(255,255,255,1), inset 0 -2px 6px rgba(20,30,50,.12), 0 14px 30px -10px rgba(25,40,70,.45)}
 .lens.grab::before{opacity:1}
@@ -548,7 +548,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver">Version 37</p>
+<p class="ver">Version 38</p>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
@@ -725,7 +725,7 @@ input[type=date]{width:100%;display:block}
     const idx = ['new','hist','prog'].indexOf(which), lens = $('#lens');
     if (!lens || idx < 0) return;
     const prev = lens.dataset.idx;
-    lens.style.transform = `translateX(${idx * 100}%)`;
+    lens.style.translate = `${idx * 100}% 0`;
     if (prev != null && +prev !== idx && !reduce){ lens.classList.remove('moving'); void lens.offsetWidth; lens.classList.add('moving'); }
     lens.dataset.idx = idx;
   }
@@ -894,6 +894,7 @@ input[type=date]{width:100%;display:block}
     const { r, w } = lensMetrics(), lens = $('#lens');
     tabDrag = { id: e.pointerId, x0: e.clientX, moved: false, w, left: r.left };
     try { tabBar.setPointerCapture(e.pointerId); } catch(_){}
+    lens.style.transformOrigin = `${(+lens.dataset.idx || 0) * 50}% 50%`;
     lens.classList.add('grab');
     tabBar.classList.add('grabbing');
   });
@@ -905,8 +906,9 @@ input[type=date]{width:100%;display:block}
     lens.classList.add('drag');
     let x = e.clientX - tabDrag.left - 4 - tabDrag.w / 2;
     const maxX = tabDrag.w * 2;
-    if (x < 0) x = x * 0.25; if (x > maxX) x = maxX + (x - maxX) * 0.25;   // Gummiband am Rand
-    lens.style.transform = `translateX(${x}px)`;
+    x = Math.max(0, Math.min(maxX, x));   // bleibt immer innerhalb der Leiste
+    lens.style.transformOrigin = `${(x / maxX) * 100}% 50%`;   // wächst am Rand nach innen
+    lens.style.translate = `${x}px 0`;
     hoverTab(Math.max(0, Math.min(2, Math.round(x / tabDrag.w))));
   });
   function endTabDrag(e){
@@ -915,7 +917,7 @@ input[type=date]{width:100%;display:block}
     const lens = $('#lens');
     lens.classList.remove('drag', 'grab'); tabBar.classList.remove('grabbing'); hoverTab(-1);
     let idx;
-    if (d.moved){ const m = /translateX\((-?[\d.]+)px\)/.exec(lens.style.transform); idx = Math.max(0, Math.min(2, Math.round((m ? +m[1] : 0) / d.w))); }
+    if (d.moved){ const m = /(-?[\d.]+)px/.exec(lens.style.translate); idx = Math.max(0, Math.min(2, Math.round((m ? +m[1] : 0) / d.w))); }
     else idx = Math.max(0, Math.min(2, Math.floor((e.clientX - d.left - 4) / d.w)));
     tabHandled = true; setTimeout(() => { tabHandled = false; }, 60);
     showTab(TABS[idx]);
