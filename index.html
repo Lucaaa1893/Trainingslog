@@ -510,6 +510,15 @@ input[type=date]{width:100%;display:block}
   transition:opacity .25s ease, padding .35s var(--spring)}
 .lens.grab::after,.lens.travel::after{opacity:1;padding:9px}
 .lens.drag::after{padding:11px}
+
+/* Lupe: vergrößerte, blaue Kopie der Tab-Texte, auf die Form der Blase zugeschnitten */
+.lens-mag{position:absolute;left:0;top:0;width:0;height:0;z-index:3;pointer-events:none;overflow:hidden;opacity:0;transition:opacity .18s ease}
+.lens-mag.on{opacity:1}
+.lm-row{position:absolute;display:grid;grid-template-columns:repeat(3,1fr);align-items:center;text-align:center;font:600 14px/1 var(--f-body);color:var(--accent-text);will-change:transform}
+.lens.grab,.lens.travel{z-index:2;-webkit-backdrop-filter:blur(6px) saturate(170%) brightness(1.08);backdrop-filter:blur(6px) saturate(170%) brightness(1.08);
+  background:radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,.98), rgba(244,246,250,.93) 55%, rgba(250,251,253,.96))}
+.tabs.grabbing .tab.hover,.tab.hover{scale:1}
+.tab.held,.tab.press{z-index:1!important}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -528,6 +537,7 @@ input[type=date]{width:100%;display:block}
 
 <div class="tabs" role="tablist">
   <span class="lens" id="lens" aria-hidden="true"></span>
+  <span class="lens-mag" id="lensMag" aria-hidden="true"><span class="lm-row"><span>Eintragen</span><span>Verlauf</span><span>Fortschritt</span></span></span>
   <button class="tab" role="tab" id="tab-new" aria-controls="view-new" aria-selected="true">Eintragen</button>
   <button class="tab" role="tab" id="tab-hist" aria-controls="view-hist" aria-selected="false">Verlauf</button>
   <button class="tab" role="tab" id="tab-prog" aria-controls="view-prog" aria-selected="false">Fortschritt</button>
@@ -582,7 +592,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 43</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 44</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -718,7 +728,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 43;
+  const MY_VERSION = 44;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -781,6 +791,31 @@ input[type=date]{width:100%;display:block}
     if (e.animationName === 'jelly' || e.animationName === 'jelly-soft') e.target.classList.remove('press');
     if (e.animationName === 'popin') e.target.classList.remove('pop-in');
   });
+
+  // ---- Lupe in der Glasblase: Inhalt darunter vergrößert und blau, wie bei iOS ----
+  const magWrap = document.getElementById('lensMag');
+  let magRaf = 0, magUntil = 0;
+  function syncMag(){
+    const L = $('#lens'), tb = document.querySelector('.tabs'), R = magWrap.firstElementChild;
+    const tr = tb.getBoundingClientRect(), lr = L.getBoundingClientRect();
+    const x = lr.left - tr.left - tb.clientLeft, y = lr.top - tr.top - tb.clientTop;
+    Object.assign(magWrap.style, { left: x + 'px', top: y + 'px', width: lr.width + 'px', height: lr.height + 'px', borderRadius: (lr.height / 2) + 'px' });
+    const t0 = $('#tab-new'), t2 = $('#tab-prog');
+    const rl = t0.offsetLeft - x, rt = t0.offsetTop - y;
+    Object.assign(R.style, { left: rl + 'px', top: rt + 'px', width: (t2.offsetLeft + t2.offsetWidth - t0.offsetLeft) + 'px', height: t0.offsetHeight + 'px' });
+    const sy = parseFloat((L.style.scale || '').split(' ')[1]) || 1.45;
+    const M = 1.3 + Math.max(0, sy - 1.45) * 0.9;          // stärker, wenn am Rand gedrückt wird
+    R.style.transformOrigin = `${lr.width / 2 - rl}px ${lr.height / 2 - rt}px`;
+    R.style.transform = `scale(${M})`;
+  }
+  function magLoop(){
+    const L = $('#lens'), active = L.classList.contains('grab') || L.classList.contains('travel');
+    if (active) magUntil = performance.now() + 450;
+    magWrap.classList.toggle('on', active);
+    syncMag();
+    if (performance.now() < magUntil) magRaf = requestAnimationFrame(magLoop); else magRaf = 0;
+  }
+  function kickMag(){ if (reduce) return; magUntil = performance.now() + 450; if (!magRaf) magRaf = requestAnimationFrame(magLoop); }
   function moveLens(which){
     const idx = ['new','hist','prog'].indexOf(which), lens = $('#lens');
     if (!lens || idx < 0) return;
@@ -789,7 +824,7 @@ input[type=date]{width:100%;display:block}
     if (prev != null && +prev !== idx && !reduce){
       // wie iOS: Pille wird beim Wechseln zur großen Glasblase, gleitet rüber und schrumpft wieder
       lens.style.transformOrigin = `${idx * 50}% 50%`;
-      lens.classList.add('travel');
+      lens.classList.add('travel'); kickMag();
       clearTimeout(lens._t); lens._t = setTimeout(() => lens.classList.remove('travel'), 420);
       const from = +prev, to = idx, step = to > from ? 1 : -1;
       for (let k = from; k !== to + step; k += step) setTimeout(() => hoverTab(k === to ? -1 : k), Math.abs(k - from) * 120);
@@ -964,6 +999,7 @@ input[type=date]{width:100%;display:block}
     lens.style.transformOrigin = `${(+lens.dataset.idx || 0) * 50}% 50%`;
     lens.classList.add('grab');
     tabBar.classList.add('grabbing');
+    kickMag();
   });
   tabBar.addEventListener('pointermove', e => {
     if (!tabDrag || e.pointerId !== tabDrag.id) return;
@@ -977,9 +1013,11 @@ input[type=date]{width:100%;display:block}
     x = Math.max(0, Math.min(maxX, x));   // bleibt immer innerhalb der Leiste
     // am Rand: Blase zoomt federnd größer statt weiterzurutschen
     const z = over ? Math.min(0.45, over / 140) : 0;
-    lens.style.scale = z ? `${1.1 + z} ${1.45 + z * 0.8}` : '';
+    // am Rand wie Gummi: schmaler und höher, wächst nicht zur Seite
+    lens.style.scale = z ? `${1.1 - z * 0.35} ${1.45 + z * 0.5}` : '';
     lens.style.transformOrigin = `${(x / maxX) * 100}% 50%`;   // wächst am Rand nach innen
     lens.style.translate = `${x}px 0`;
+    kickMag();
     hoverTab(Math.max(0, Math.min(2, Math.round(x / tabDrag.w))));
   });
   function endTabDrag(e){
@@ -987,7 +1025,7 @@ input[type=date]{width:100%;display:block}
     const d = tabDrag; tabDrag = null;
     const lens = $('#lens');
     lens.style.scale = '';
-    lens.classList.remove('drag', 'grab'); tabBar.classList.remove('grabbing'); hoverTab(-1);
+    lens.classList.remove('drag', 'grab'); kickMag(); tabBar.classList.remove('grabbing'); hoverTab(-1);
     let idx;
     if (d.moved){ const m = /(-?[\d.]+)px/.exec(lens.style.translate); idx = Math.max(0, Math.min(2, Math.round((m ? +m[1] : 0) / d.w))); }
     else idx = Math.max(0, Math.min(2, Math.floor((e.clientX - d.left - 4) / d.w)));
