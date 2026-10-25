@@ -519,6 +519,10 @@ input[type=date]{width:100%;display:block}
   background:radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,.98), rgba(244,246,250,.93) 55%, rgba(250,251,253,.96))}
 .tabs.grabbing .tab.hover,.tab.hover{scale:1}
 .tab.held,.tab.press{z-index:1!important}
+
+/* Safari-Fix: keine Unschärfe auf der bewegten Blase (verursacht hängende Bilder) */
+.lens,.lens.grab,.lens.travel,.lens.drag{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.lens::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -592,7 +596,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 45</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 46</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -728,7 +732,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 45;
+  const MY_VERSION = 46;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -995,6 +999,7 @@ input[type=date]{width:100%;display:block}
     if (e.button > 0) return;
     const { r, w } = lensMetrics(), lens = $('#lens');
     tabDrag = { id: e.pointerId, x0: e.clientX, moved: false, w, left: r.left };
+    lastTabTouch = performance.now();
     try { tabBar.setPointerCapture(e.pointerId); } catch(_){}
     lens.style.transformOrigin = `${(+lens.dataset.idx || 0) * 50}% 50%`;
     lens.classList.add('grab');
@@ -1050,6 +1055,23 @@ input[type=date]{width:100%;display:block}
   document.addEventListener('pointercancel', () => { if (tabDrag) resetLens(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') resetLens(); });
   addEventListener('blur', () => { if (tabDrag) resetLens(); });
+  // iOS-Fallback: Touch-Ereignisse beenden das Ziehen zuverlässig, Wächter setzt hängende Blase zurück
+  let lastTabTouch = 0;
+  tabBar.addEventListener('touchstart', () => { lastTabTouch = performance.now(); }, { passive:true });
+  tabBar.addEventListener('touchmove', () => { lastTabTouch = performance.now(); }, { passive:true });
+  document.addEventListener('pointermove', e => { if (tabDrag && e.pointerId === tabDrag.id) lastTabTouch = performance.now(); }, { passive:true });
+  function touchEnd(e){
+    if (!tabDrag) return;
+    const t = e.changedTouches && e.changedTouches[0];
+    endTabDrag({ clientX: t ? t.clientX : tabDrag.x0 });
+    lensFailsafe();
+  }
+  document.addEventListener('touchend', touchEnd, { passive:true });
+  document.addEventListener('touchcancel', () => { if (tabDrag) resetLens(); }, { passive:true });
+  setInterval(() => {
+    const L = $('#lens'), stuck = L.classList.contains('grab') || L.classList.contains('drag') || tabBar.classList.contains('grabbing');
+    if (stuck && performance.now() - lastTabTouch > 1500 && (!tabDrag || performance.now() - lastTabTouch > 4000)) resetLens();
+  }, 500);
   TABS.forEach(t => $('#tab-' + t).addEventListener('click', () => { if (!tabHandled) showTab(t); }));
 
   // ---- editor ----
