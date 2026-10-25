@@ -439,6 +439,28 @@ input[type=date]{width:100%;display:block}
 .vtip .dotc{width:10px;height:10px;border-radius:50%;flex:0 0 10px;margin-top:4px}
 .vtip b{font-weight:600}
 .legend .ln{width:16px;height:2px;border-radius:2px;background:var(--fg);opacity:.55;vertical-align:3px}
+
+/* Kalender */
+.cal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.cal-head h2{font-size:20px}
+.cal-head .icon{width:36px;height:36px;font-size:22px;line-height:1;padding-bottom:2px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px 4px;margin-bottom:12px}
+.cw{text-align:center;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;padding-bottom:2px}
+.cd{aspect-ratio:1;max-width:100%;width:100%;max-height:44px;justify-self:center;border:0;border-radius:50%;background:transparent;color:var(--fg);font:600 15px/1 var(--f-body);font-variant-numeric:tabular-nums;display:grid;place-items:center;padding:0}
+.cd.empty{visibility:hidden}
+.cd.future{color:rgba(60,70,90,.35)}
+.cd.today:not(.has){box-shadow:inset 0 0 0 2px var(--accent);color:var(--accent-text)}
+.cd.has{color:#fff;background:var(--shine), var(--c);box-shadow:inset 0 1px 1px rgba(255,255,255,.55), inset 0 -4px 7px -4px rgba(255,255,255,.5), 0 6px 12px -6px rgba(25,40,70,.5)}
+.cd.sel{transform:scale(1.12);box-shadow:0 0 0 2.5px #fff, 0 0 0 4.5px rgba(30,40,60,.18), 0 8px 16px -6px rgba(25,40,70,.45)}
+.cd.sel:not(.has){background:rgba(255,255,255,.75);color:var(--fg)}
+.cal-legend{flex-wrap:wrap;margin:0 0 12px}
+.cal-legend b{color:var(--fg);font-weight:600}
+.vstats em{font-style:normal;font-weight:700}
+.vstats em.up{color:var(--good)} .vstats em.down{color:var(--bad)}
+.cdet{display:flex;gap:10px;align-items:flex-start;margin-top:8px;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.75);box-shadow:inset 0 1px 1px #fff;font-size:13px;line-height:1.4;font-variant-numeric:tabular-nums}
+.cdet .dotc{width:10px;height:10px;border-radius:50%;flex:0 0 10px;margin-top:4px}
+.cdet b{font-weight:600}
+.cex{color:var(--muted);font-size:12px;margin-top:2px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -511,7 +533,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver">Version 25</p>
+<p class="ver">Version 26</p>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
@@ -1241,80 +1263,75 @@ input[type=date]{width:100%;display:block}
       <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.6" fill="var(--accent)"></circle></svg>`;
   }
   const kg1 = n => (Math.round(n * 10) / 10).toString().replace('.', ',');
-  // ---- Volumen-Übersicht ----
-  let volFilter = 'Alle', volSel = null;
+  // ---- Kalender-Übersicht ----
+  let calMonth = null, calSel = null;
   const sesVol = s => s.exercises.reduce((a, e) => a + exStats(e).vol, 0);
   const sesSets = s => s.exercises.reduce((a, e) => a + e.sets.length, 0);
-  const typeCol = t => t === 'Push' ? 'var(--accent)' : t === 'Pull' ? 'var(--accent2)' : dayColor(t);
+  const typeCol = t => t === 'Push' ? '#2F7BF5' : t === 'Pull' ? '#9358F2' : dayColor(t);
   const fmtVol = v => v >= 1000 ? (Math.round(v / 100) / 10).toLocaleString('de-DE') + ' t' : Math.round(v).toLocaleString('de-DE') + ' kg';
-  const fmtVolShort = v => v >= 1000 ? (Math.round(v / 100) / 10).toLocaleString('de-DE') + 't' : Math.round(v) + '';
-  // Vergleich immer mit dem vorherigen Training derselben Art (Push mit Push …)
-  function prevSame(all, s){ const i = all.indexOf(s); for (let k = i - 1; k >= 0; k--) if (all[k].type === s.type) return all[k]; return null; }
+  const isoDay = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   function volChart(all){
-    if (!all.length) return '';
-    const types = [...new Set(all.map(s => s.type))];
-    if (volFilter !== 'Alle' && !types.includes(volFilter)) volFilter = 'Alle';
-    const L = volFilter === 'Alle' ? all : all.filter(s => s.type === volFilter);
-    const vols = L.map(sesVol);
-    const total = vols.reduce((a, b) => a + b, 0), avg = total / L.length;
-    const last = L[L.length - 1], prev = prevSame(all, last);
-    const ch = prev && sesVol(prev) ? (sesVol(last) - sesVol(prev)) / sesVol(prev) * 100 : null;
-    const chTxt = ch == null ? '–' : (ch >= 0 ? '+' : '−') + Math.abs(Math.round(ch)) + ' %';
-    const chCls = ch == null ? '' : ch >= 1 ? 'up' : ch <= -1 ? 'down' : '';
-    // Diagramm: feste Balkenbreite, bei vielen Trainings seitlich scrollbar
-    const H = 190, top = 26, bottom = 30, padL = 50, padR = 6;
-    const cw = Math.max(260, ((document.querySelector('#progress') || {}).clientWidth || 340) - 36);
-    const BW = Math.max(32, Math.min(64, (cw - padL - padR) / L.length));
-    const W = Math.max(cw, padL + padR + L.length * BW);
-    const max = Math.max(...vols) || 1, plotH = H - top - bottom;
-    const yOf = v => H - bottom - (v / max) * plotH;
-    // gleitender Durchschnitt über 3 Trainings als Trendlinie
-    const trend = vols.map((v, i) => { const w = vols.slice(Math.max(0, i - 2), i + 1); return w.reduce((a, b) => a + b, 0) / w.length; });
-    const sel = L.find(s => String(s.id) === String(volSel)) || last;
-    const grid = [0.5, 1].map(f => `<line x1="0" x2="${W}" y1="${yOf(max * f).toFixed(1)}" y2="${yOf(max * f).toFixed(1)}" stroke="var(--line2)" stroke-dasharray="3 4"></line>`).join('')
-      + `<line x1="0" x2="${W}" y1="${H - bottom}" y2="${H - bottom}" stroke="var(--line2)"></line>`;
-    const bars = L.map((s, i) => {
-      const w = Math.min(34, BW - 10), x = padL + i * BW + (BW - w) / 2, y = yOf(vols[i]), h = Math.max(2, H - bottom - y);
-      const d = new Date(s.date + 'T00:00'), isSel = s === sel;
-      return `<g class="vbar${isSel ? ' sel' : ''}" data-vb="${s.id}" role="button" tabindex="0" aria-label="${esc(fmtDate(s.date))}, ${esc(s.type)}, ${fmtVol(vols[i])}">
-        <rect x="${x - 6}" y="${top - 18}" width="${w + 12}" height="${H - top + 18}" fill="transparent"></rect>
-        <rect x="${x}" y="${y.toFixed(1)}" width="${w}" height="${h.toFixed(1)}" rx="7" fill="${typeCol(s.type)}" opacity="${isSel ? 1 : .55}"></rect>
-        <text x="${x + w / 2}" y="${(y - 6).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="${isSel ? 700 : 500}" fill="${isSel ? 'var(--fg)' : 'var(--muted)'}">${fmtVolShort(vols[i])}</text>
-        <text x="${x + w / 2}" y="${H - 12}" text-anchor="middle" font-size="10" font-weight="${isSel ? 700 : 400}" fill="${isSel ? 'var(--fg)' : 'var(--muted)'}">${d.getDate()}.${d.getMonth() + 1}.</text>
-      </g>`;
-    }).join('');
-    const tp = trend.map((v, i) => `${(padL + i * BW + BW / 2).toFixed(1)},${yOf(v).toFixed(1)}`);
-    const trendSvg = L.length > 2 ? `<polyline points="${tp.join(' ')}" fill="none" stroke="var(--fg)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity=".55"></polyline>` : '';
-    const sv = sesVol(sel), sp = prevSame(all, sel), sch = sp && sesVol(sp) ? Math.round((sv - sesVol(sp)) / sesVol(sp) * 100) : null;
-    const chips = ['Alle', ...types].map(t => `<button type="button" class="vchip${t === volFilter ? ' on' : ''}" data-vf="${esc(t)}"${t !== 'Alle' ? ` style="--c:${typeCol(t)}"` : ''}>${esc(t)}</button>`).join('');
-    return `<div class="card vol">
-      <div class="vol-head"><h2>Volumen</h2><span class="muted small">Wdh × kg aller Sätze pro Training</span></div>
-      <div class="vchips" role="group" aria-label="Filter">${chips}</div>
+    const now = new Date();
+    if (!calMonth) calMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const y = calMonth.getFullYear(), m = calMonth.getMonth(), prefix = `${y}-${String(m + 1).padStart(2, '0')}`;
+    const byDay = new Map();
+    all.forEach(s => { if (!byDay.has(s.date)) byDay.set(s.date, []); byDay.get(s.date).push(s); });
+    const daysIn = new Date(y, m + 1, 0).getDate(), lead = (new Date(y, m, 1).getDay() + 6) % 7, today = isoDay(now);
+    const monthSes = all.filter(s => s.date.startsWith(prefix));
+    const pm = new Date(y, m - 1, 1), prevPrefix = `${pm.getFullYear()}-${String(pm.getMonth() + 1).padStart(2, '0')}`;
+    const prevCount = all.filter(s => s.date.startsWith(prevPrefix)).length;
+    if (!calSel || !calSel.startsWith(prefix)) calSel = monthSes.length ? monthSes[monthSes.length - 1].date : (today.startsWith(prefix) ? today : null);
+    let cells = '';
+    for (let i = 0; i < lead; i++) cells += '<span class="cd empty" aria-hidden="true"></span>';
+    for (let d = 1; d <= daysIn; d++){
+      const key = isoDay(new Date(y, m, d)), ss = byDay.get(key) || [];
+      const cols = [...new Set(ss.map(s => typeCol(s.type)))];
+      const bg = cols.length === 1 ? cols[0] : cols.length > 1 ? `linear-gradient(135deg, ${cols[0]} 50%, ${cols[1]} 50%)` : '';
+      const cls = ['cd', ss.length ? 'has' : '', key === today ? 'today' : '', key === calSel ? 'sel' : '', key > today ? 'future' : ''].filter(Boolean).join(' ');
+      cells += `<button type="button" class="${cls}" data-cd="${key}"${bg ? ` style="--c:${bg}"` : ''} aria-label="${d}. ${ss.length ? ss.map(s => s.type).join(' und ') : 'kein Training'}"${key === calSel ? ' aria-pressed="true"' : ''}>${d}</button>`;
+    }
+    const counts = {}; monthSes.forEach(s => counts[s.type] = (counts[s.type] || 0) + 1);
+    const vol = monthSes.reduce((a, s) => a + sesVol(s), 0);
+    const diff = monthSes.length - prevCount;
+    const weeks = (today.startsWith(prefix) ? now.getDate() : daysIn) / 7;
+    const perWeek = monthSes.length ? (Math.round(monthSes.length / Math.max(1, weeks) * 10) / 10).toLocaleString('de-DE') : '0';
+    const selSes = calSel ? (byDay.get(calSel) || []) : [];
+    const detail = !calSel ? '' : selSes.length ? selSes.map(s => `
+      <div class="cdet">
+        <span class="dotc" style="background:${typeCol(s.type)}"></span>
+        <div><b>${esc(fmtDate(s.date))} · ${esc(s.type)}</b><br>${s.exercises.length} ${s.exercises.length === 1 ? 'Übung' : 'Übungen'} · ${sesSets(s)} Sätze · ${fmtVol(sesVol(s))}
+        <div class="cex">${s.exercises.map(e => esc(e.name)).join(' · ')}</div></div>
+      </div>`).join('') : `<div class="cdet muted"><span class="dotc" style="background:var(--line2)"></span><div>${esc(fmtDate(calSel))}: kein Training</div></div>`;
+    const legend = [...new Set([...days().map(d => d.name), ...monthSes.map(s => s.type)])].filter(t => counts[t] || t === 'Push' || t === 'Pull')
+      .map(t => `<span><i style="background:${typeCol(t)}"></i>${esc(t)}${counts[t] ? ` <b>${counts[t]}×</b>` : ''}</span>`).join('');
+    return `<div class="card vol cal">
+      <div class="cal-head">
+        <button type="button" class="icon" data-cm="-1" aria-label="Vorheriger Monat">‹</button>
+        <h2>${calMonth.toLocaleDateString('de-DE', { month:'long', year:'numeric' })}</h2>
+        <button type="button" class="icon" data-cm="1" aria-label="Nächster Monat">›</button>
+      </div>
+      <div class="cal-grid" role="grid">
+        ${['Mo','Di','Mi','Do','Fr','Sa','So'].map(w => `<span class="cw">${w}</span>`).join('')}
+        ${cells}
+      </div>
+      <div class="legend cal-legend">${legend}</div>
       <div class="vstats">
-        <div><b>${fmtVol(total)}</b><span>Gesamt · ${L.length} ${L.length === 1 ? 'Training' : 'Trainings'}</span></div>
-        <div><b>${fmtVol(avg)}</b><span>Ø pro Training</span></div>
-        <div><b class="${chCls}">${chTxt}</b><span>Letztes vs. davor</span></div>
+        <div><b>${monthSes.length}</b><span>Trainings${prevCount || monthSes.length ? ` · <em class="${diff > 0 ? 'up' : diff < 0 ? 'down' : ''}">${diff > 0 ? '+' : diff < 0 ? '−' : '±'}${Math.abs(diff)}</em> zum Vormonat` : ''}</span></div>
+        <div><b>${perWeek}</b><span>Ø pro Woche</span></div>
+        <div><b>${fmtVol(vol)}</b><span>Volumen im Monat</span></div>
       </div>
-      <div class="vwrap">
-        <div class="vy" aria-hidden="true"><span style="top:${yOf(max) - 8}px">${fmtVol(max)}</span><span style="top:${yOf(max / 2) - 8}px">${fmtVol(max / 2)}</span></div>
-        <div class="vscroll"><svg width="${W}" height="${H}" style="width:${W}px;height:${H}px" viewBox="0 0 ${W} ${H}" role="img" aria-label="Volumen pro Training">${grid}${bars}${trendSvg}</svg></div>
-      </div>
-      <div class="vtip"><span class="dotc" style="background:${typeCol(sel.type)}"></span><div><b>${esc(fmtDate(sel.date))} · ${esc(sel.type)}</b><br>${fmtVol(sv)} · ${sel.exercises.length} ${sel.exercises.length === 1 ? 'Übung' : 'Übungen'} · ${sesSets(sel)} Sätze${sch == null ? '' : ` · <span class="${sch >= 1 ? 'up' : sch <= -1 ? 'down' : ''}">${sch >= 0 ? '+' : '−'}${Math.abs(sch)} %</span> zum ${esc(sel.type)} davor`}</div></div>
-      <div class="legend"><span><i class="ln"></i>Trend (Ø 3 Trainings)</span><span>Balken antippen</span></div>
+      ${detail}
     </div>`;
   }
-  function refreshVol(keepScroll){
+  function refreshVol(){
     const el = document.querySelector('#progress .vol'); if (!el) return;
-    const sc = el.querySelector('.vscroll'), left = sc ? sc.scrollLeft : 0;
     const all = [...data.sessions].sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id));
     el.outerHTML = volChart(all);
-    const nsc = document.querySelector('#progress .vscroll'); if (nsc) nsc.scrollLeft = keepScroll ? left : nsc.scrollWidth;
   }
   $('#progress').addEventListener('click', e => {
-    const f = e.target.closest('[data-vf]'); if (f){ volFilter = f.dataset.vf; volSel = null; refreshVol(false); return; }
-    const b = e.target.closest('[data-vb]'); if (b){ volSel = b.dataset.vb; refreshVol(true); }
+    const n = e.target.closest('[data-cm]'); if (n){ calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + (+n.dataset.cm), 1); calSel = null; refreshVol(); return; }
+    const d = e.target.closest('[data-cd]'); if (d){ calSel = d.dataset.cd; refreshVol(); }
   });
-  $('#progress').addEventListener('keydown', e => { const b = e.target.closest('[data-vb]'); if (b && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); volSel = b.dataset.vb; refreshVol(true); } });
   function renderProgress(){
     const list = [...data.sessions].sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id));
     if (!list.length){
