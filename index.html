@@ -721,8 +721,8 @@ input[type=date]{width:100%;display:block}
 .edit-bar span{flex:1;min-width:0}
 .edit-bar button{flex:none;border:0;border-radius:999px;padding:8px 14px;font:600 14px/1 var(--f-body);color:#B35F00;background:rgba(255,255,255,.9)}
 .past-hint{margin:10px 2px 0;font-size:13px;color:#B35F00;font-weight:500}
-.mood{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.mood button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:18px;font:600 13px/1 var(--f-body);color:var(--muted);background:var(--drop-btn);border:1px solid rgba(255,255,255,.5);box-shadow:var(--drop-shadow);transition:transform .35s var(--spring), background .2s, color .2s}
+.mood{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.mood button{min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 2px;border-radius:16px;font:600 11.5px/1 var(--f-body);color:var(--muted);background:var(--drop-btn);border:1px solid rgba(255,255,255,.5);box-shadow:var(--drop-shadow);transition:transform .35s var(--spring), background .2s, color .2s}
 .mood button span{font-size:28px;line-height:1;filter:grayscale(.7);opacity:.7;transition:filter .2s, opacity .2s, transform .35s var(--spring)}
 .mood button[aria-checked="true"]{color:#fff;background:var(--shine), linear-gradient(180deg,#4B8EFF,#2F7BF5);transform:scale(1.04)}
 .mood button[aria-checked="true"] span{filter:none;opacity:1;transform:scale(1.12)}
@@ -796,9 +796,11 @@ input[type=date]{width:100%;display:block}
   <div class="card fin">
     <span class="lbl" id="l-mood">Wie war das Training?</span>
     <div class="mood" role="radiogroup" aria-labelledby="l-mood">
-      <button type="button" role="radio" data-mood="1" aria-checked="false"><span>😫</span>Platt</button>
-      <button type="button" role="radio" data-mood="2" aria-checked="false"><span>😐</span>Okay</button>
-      <button type="button" role="radio" data-mood="3" aria-checked="false"><span>💪</span>Stark</button>
+      <button type="button" role="radio" data-mood="1" aria-checked="false"><span>😫</span>Schlecht</button>
+      <button type="button" role="radio" data-mood="2" aria-checked="false"><span>😕</span>Mäßig</button>
+      <button type="button" role="radio" data-mood="3" aria-checked="false"><span>😐</span>Mittel</button>
+      <button type="button" role="radio" data-mood="4" aria-checked="false"><span>🙂</span>Gut</button>
+      <button type="button" role="radio" data-mood="5" aria-checked="false"><span>💪</span>Stark</button>
     </div>
     <label class="lbl" for="s-note" style="margin-top:14px">Notiz zum Training</label>
     <textarea id="s-note" rows="2" placeholder="z. B. wenig geschlafen, Schulter gezwickt …"></textarea>
@@ -830,7 +832,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 58</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 59</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -966,7 +968,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 58;
+  const MY_VERSION = 59;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1318,8 +1320,16 @@ input[type=date]{width:100%;display:block}
   TABS.forEach(t => $('#tab-' + t).addEventListener('click', () => { if (!tabHandled) showTab(t); }));
 
   // ---- editor ----
-  const MOODS = { 1: '😫', 2: '😐', 3: '💪' };
-  const MOOD_TXT = { 1: 'Platt', 2: 'Okay', 3: 'Stark' };
+  const MOODS = { 1: '😫', 2: '😕', 3: '😐', 4: '🙂', 5: '💪' };
+  const MOOD_TXT = { 1: 'Schlecht', 2: 'Mäßig', 3: 'Mittel', 4: 'Gut', 5: 'Stark' };
+  // alte 3er-Skala (1/2/3) auf die neue 5er-Skala umrechnen
+  if (data.moodScale !== 5){
+    const m = { 1: 1, 2: 3, 3: 5 };
+    data.sessions.forEach(x => { if (x.mood) x.mood = m[x.mood] || x.mood; });
+    if (data.draft && data.draft.mood) data.draft.mood = m[data.draft.mood] || data.draft.mood;
+    if (data.draft && data.draft.keep && data.draft.keep.mood) data.draft.keep.mood = m[data.draft.keep.mood] || data.draft.keep.mood;
+    data.moodScale = 5; persist();
+  }
   function renderMeta(){
     const d = data.draft;
     $('#s-date').value = d.date;

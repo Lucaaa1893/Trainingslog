@@ -1,5 +1,5 @@
 // Offline-Cache für den Trainingslog. VERSION erhöhen, wenn sich Dateien ändern.
-const VERSION = 58;
+const VERSION = 59;
 const CACHE = 'trainingslog-v' + VERSION;
 const CORE = ['./', './index.html', './manifest.json', './icon13-180.png', './icon13-192.png', './icon13-512.png'];
 
