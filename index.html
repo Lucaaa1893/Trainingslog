@@ -764,6 +764,8 @@ input[type=date]{width:100%;display:block}
 .exa.big.fit .exaimg{object-fit:contain;will-change:transform}
 .exa.big.fit.aligning{touch-action:none;cursor:grab;border:2px solid #4B8EFF;box-shadow:0 0 0 4px rgba(75,142,255,.3)}
 .ex-name .nm[data-anim]{cursor:pointer}
+.size-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:12px;color:#fff;font-weight:600;font-size:14px}
+.size-row .sz{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.16);color:#fff;font:600 24px/1 var(--f-body);display:grid;place-items:center;padding:0}
 .align-hint{margin:12px 0 0;font-size:13px;font-weight:600;color:#fff}
 .anim-dlg > .ghost{margin-top:10px}
 .exa.big .exaimg{pointer-events:none;-webkit-user-select:none;user-select:none}
@@ -882,7 +884,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 68</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 69</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1018,7 +1020,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 68;
+  const MY_VERSION = 69;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1478,8 +1480,8 @@ input[type=date]{width:100%;display:block}
     if (blob){ await mediaDo('readwrite', st => st.put(blob, name)); exImg.set(name, URL.createObjectURL(blob)); }
     else { await mediaDo('readwrite', st => st.delete(name)); exImg.delete(name); }
   }
-  const imgFit = name => Object.assign({ dx: 0, dy: 0 }, (data.imgFit || {})[name] || {});
-  const imgStyle = name => { const f = imgFit(name); return `transform:translate(${f.dx}%, ${f.dy}%)`; };
+  const imgFit = name => Object.assign({ dx: 0, dy: 0, s: 1 }, (data.imgFit || {})[name] || {});
+  const imgStyle = name => { const f = imgFit(name); return `transform:translate(${f.dx}%, ${f.dy}%) scale(${f.s})`; };
   function exTile(name, big){
     if (exImg.has(name)) return `<img class="exaimg" src="${exImg.get(name)}" alt="" style="${imgStyle(name)}" draggable="false">`;
     const k = exAnimKey(name);
@@ -1631,7 +1633,7 @@ input[type=date]{width:100%;display:block}
       let aligning = false;
       const draw = () => { bg.innerHTML = `<div class="dlg anim-dlg" role="dialog" aria-modal="true" aria-label="${esc(n)}"><div class="exa big">${exTile(n, true)}</div><h2>${esc(n)}</h2>
         <div class="anim-acts"><label class="ghost alt anim-pick">${exImg.has(n) ? 'Anderes Bild/GIF' : 'Eigenes Bild/GIF wählen'}<input type="file" accept="image/*" hidden></label>${exImg.has(n) ? '<button type="button" class="ghost alt clr anim-rm">Entfernen</button>' : ''}</div>
-        ${exImg.has(n) ? (aligning ? '<p class="align-hint">Bild mit dem Finger verschieben, dann „Fertig“.</p><button type="button" class="ghost align-done">Fertig</button>' : '') : ''}
+        ${exImg.has(n) ? (aligning ? '<div class="size-row"><button type="button" class="sz" data-sz="-1" aria-label="Kleiner">−</button><span>Größe</span><button type="button" class="sz" data-sz="1" aria-label="Größer">+</button></div><p class="align-hint">Mit einem Finger verschieben, mit zwei Fingern größer/kleiner ziehen, dann „Fertig“.</p><button type="button" class="ghost align-done">Fertig</button>' : '') : ''}
         <p class="dlg-sub anim-note">Wird nur auf diesem Gerät gespeichert.</p>
         <div class="dlg-btns"><button type="button" class="dlg-ok">Schließen</button></div></div>`;
         bg.querySelector('input[type=file]').addEventListener('change', async ev => { const f = ev.target.files[0]; if (!f) return; try { await setImg(n, f); data.imgFit = data.imgFit || {}; delete data.imgFit[n]; persist(); aligning = true; } catch (_){ say('Bild konnte nicht gespeichert werden.', true); } draw(); });
@@ -1643,22 +1645,28 @@ input[type=date]{width:100%;display:block}
           const save = f => { data.imgFit = data.imgFit || {}; data.imgFit[n] = f; im.setAttribute('style', imgStyle(n)); persist(); };
           // Verschieben per Touch (iPhone) und Maus; Weg = tatsächlicher Überstand des Bildes
           let drag = null;
-          // frei verschieben in alle Richtungen (Versatz in % der Rahmengröße)
-          const start = (cx, cy) => {
+          // verschieben (1 Finger) und größer/kleiner (2 Finger); Versatz in % der Rahmengröße
+          const clS = v => Math.max(0.3, Math.min(4, Math.round(v * 100) / 100));
+          const clD = v => Math.max(-150, Math.min(150, Math.round(v * 10) / 10));
+          const start = (cx, cy, dist) => {
             if (!aligning) return false;
             const r = frame.getBoundingClientRect();
-            drag = { x: cx, y: cy, f: imgFit(n), w: r.width, h: r.height };
+            drag = { x: cx, y: cy, d: dist || 0, f: imgFit(n), w: r.width, h: r.height };
             return true;
           };
-          const move = (cx, cy) => {
+          const move = (cx, cy, dist) => {
             if (!drag) return;
-            const cl = v => Math.max(-60, Math.min(60, Math.round(v * 10) / 10));
-            save({ dx: cl(drag.f.dx + (cx - drag.x) / drag.w * 100), dy: cl(drag.f.dy + (cy - drag.y) / drag.h * 100) });
+            const s2 = drag.d && dist ? clS(drag.f.s * dist / drag.d) : drag.f.s;
+            save({ dx: clD(drag.f.dx + (cx - drag.x) / drag.w * 100), dy: clD(drag.f.dy + (cy - drag.y) / drag.h * 100), s: s2 });
           };
           const end = () => { drag = null; };
-          frame.addEventListener('touchstart', ev => { const t = ev.touches[0]; if (start(t.clientX, t.clientY)) ev.preventDefault(); }, { passive: false });
-          frame.addEventListener('touchmove', ev => { if (!drag) return; ev.preventDefault(); const t = ev.touches[0]; move(t.clientX, t.clientY); }, { passive: false });
-          frame.addEventListener('touchend', end); frame.addEventListener('touchcancel', end);
+          const tp = ev => { const a = ev.touches[0], b = ev.touches[1];
+            return b ? [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2, Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)] : [a.clientX, a.clientY, 0]; };
+          frame.addEventListener('touchstart', ev => { if (start(...tp(ev))) ev.preventDefault(); }, { passive: false });
+          frame.addEventListener('touchmove', ev => { if (!drag) return; ev.preventDefault(); const t = tp(ev);
+            if (!!t[2] !== !!drag.d) start(...t); else move(...t); }, { passive: false });
+          frame.addEventListener('touchend', ev => { if (ev.touches.length) start(...tp(ev)); else end(); }); frame.addEventListener('touchcancel', end);
+          bg.querySelectorAll('[data-sz]').forEach(b => b.addEventListener('click', () => { const f = imgFit(n); f.s = clS(f.s * (b.dataset.sz > 0 ? 1.15 : 1 / 1.15)); save(f); }));
           frame.addEventListener('mousedown', ev => { if (start(ev.clientX, ev.clientY)) ev.preventDefault(); });
           const mm = ev => move(ev.clientX, ev.clientY), mu = () => { end(); removeEventListener('mousemove', mm); removeEventListener('mouseup', mu); };
           frame.addEventListener('mousedown', () => { if (drag){ addEventListener('mousemove', mm); addEventListener('mouseup', mu); } });
