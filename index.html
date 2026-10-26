@@ -793,6 +793,11 @@ input[type=date]{width:100%;display:block}
 :root[data-theme="dark"] .exl-thumb{background:radial-gradient(120% 120% at 30% 0%, rgba(255,255,255,.12), rgba(255,255,255,.04));border-color:rgba(255,255,255,.1)}
 :root[data-theme="dark"] .exl-cat{color:#fff}
 .hl{margin-bottom:14px}
+.hl-msg{margin:0 0 8px;font-size:12px;font-weight:600;color:var(--good,#1FAA50)}
+.hl-msg.err{color:var(--bad,#E2362C)}
+.hl-sync.spin{animation:hlspin .8s linear infinite}
+@keyframes hlspin{to{transform:rotate(360deg)}}
+.hl-tile.none b{color:var(--muted);font-weight:500}
 .hl-key-row{display:flex;gap:8px}
 .hl-key-row input{flex:1;font-family:var(--f-mono);letter-spacing:.04em}
 .hl-key-row .btn{width:auto;margin:0;padding:0 18px}
@@ -939,11 +944,10 @@ input[type=date]{width:100%;display:block}
 </section>
 
 <section id="view-prog" role="tabpanel" aria-labelledby="tab-prog" hidden>
-  <div id="health"></div>
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span hidden id="ver-txt">Version 85</span><span id="ver-label">Version 8.3</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span hidden id="ver-txt">Version 86</span><span id="ver-label">Version 8.4</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1092,7 +1096,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 85;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 86;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1352,7 +1356,7 @@ input[type=date]{width:100%;display:block}
     const view = $('#view-' + which); if (view && !reduce){ view.classList.remove('pop-in'); void view.offsetWidth; view.classList.add('pop-in'); }
     updateLevelChip();
     if (which === 'hist') renderHistory();
-    if (which === 'prog'){ calMonth = null; calSel = null; renderHealth(); renderProgress(); }   // Kalender beim Öffnen immer auf heute
+    if (which === 'prog'){ calMonth = null; calSel = null; renderProgress(); }   // Kalender beim Öffnen immer auf heute
     if (which === 'ex') renderExList();
     if (typeof sheen === 'function' && !reduce) requestAnimationFrame(sheen);
   }
@@ -1600,10 +1604,13 @@ input[type=date]{width:100%;display:block}
     };
     new MutationObserver(sync).observe(document.body, { childList: true });
   })();
-  function openExDialog(n){
+  function openExDialog(n, view){
       const bg = document.createElement('div'); bg.className = 'dlg-bg';
       let aligning = false;
-      const draw = () => { bg.innerHTML = `<div class="dlg anim-dlg" role="dialog" aria-modal="true" aria-label="${esc(n)}"><div class="exa big">${exTile(n, true)}</div><h2>${esc(n)}</h2>
+      const draw = () => { if (view){ bg.innerHTML = `<div class="dlg anim-dlg" role="dialog" aria-modal="true" aria-label="${esc(n)}"><div class="exa big">${exTile(n, true)}</div><h2>${esc(n)}</h2><p class="dlg-sub anim-note">Bild und Namen änderst du im Tab „Übungen“.</p><div class="dlg-btns"><button type="button" class="dlg-ok">Schließen</button></div></div>`;
+          const fr = bg.querySelector('.exa.big'), im = fr.querySelector('.exaimg'); if (im){ fr.classList.add('fit'); const ar = () => { if (im.naturalWidth) fr.style.aspectRatio = Math.max(0.75, im.naturalWidth / im.naturalHeight).toFixed(4); }; if (im.complete) ar(); else im.addEventListener('load', ar); }
+          return; }
+        bg.innerHTML = `<div class="dlg anim-dlg" role="dialog" aria-modal="true" aria-label="${esc(n)}"><div class="exa big">${exTile(n, true)}</div><h2>${esc(n)}</h2>
         <div class="anim-acts"><label class="ghost alt anim-pick">${exImg.has(n) ? 'Anderes Bild/GIF' : 'Eigenes Bild/GIF wählen'}<input type="file" accept="image/*" hidden></label>${exImg.has(n) ? '<button type="button" class="ghost alt clr anim-rm">Entfernen</button>' : ''}</div>
         ${exImg.has(n) ? (aligning ? '<div class="size-row"><button type="button" class="sz" data-sz="-1" aria-label="Kleiner">−</button><span>Größe</span><button type="button" class="sz" data-sz="1" aria-label="Größer">+</button></div><p class="align-hint">Mit einem Finger verschieben, mit zwei Fingern größer/kleiner ziehen, dann „Fertig“.</p><button type="button" class="ghost align-done">Fertig</button>' : '') : ''}
         <p class="dlg-sub anim-note">Wird nur auf diesem Gerät gespeichert.</p>
@@ -1810,25 +1817,28 @@ input[type=date]{width:100%;display:block}
       return false;
     } finally { hSyncing = false; }
   }
-  let hSel = 'weight';
+  let hSel = 'weight', hMsg = '', hMsgErr = false;
   function renderHealth(){
+    if (!document.getElementById('health')) return;
     const H = data.health || {}, dates = Object.keys(H).sort();
-    const head = `<div class="hl-head"><h2>Körper & Erholung</h2>${data.healthKey ? '<button type="button" class="ghost alt hl-sync" aria-label="Jetzt abgleichen">↻</button>' : ''}</div>` +
+    const head = `<div class="hl-head"><h2>Körper & Erholung</h2>${data.healthKey ? `<button type="button" class="ghost alt hl-sync${hSyncing ? ' spin' : ''}" aria-label="Jetzt abgleichen">↻</button>` : ''}</div>` +
+      (data.healthKey && hMsg ? `<p class="hl-msg${hMsgErr ? ' err' : ''}">${hMsg}</p>` : '') +
       (data.healthKey ? '' : `<div class="hl-key"><p class="muted small" style="margin:0 0 8px">Einmal den Code eingeben – danach kommen deine Health-Werte jeden Abend automatisch.</p><div class="hl-key-row"><input id="hl-code" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="xxxx-xxxx-xxxx-xxxx"><button type="button" class="btn hl-go">OK</button></div>${hSyncInfo ? `<p class="nx-err" style="color:var(--bad,#E2362C)">${hSyncInfo}</p>` : ''}</div>`);
     if (!dates.length){
       $('#health').innerHTML = `<div class="card hl">${head}${data.healthKey ? '<p class="muted small" style="margin:6px 0 0">Noch keine Werte – die ersten kommen nach dem nächsten Abend-Export.</p>' : ''}</div>`;
       return;
     }
-    const last = dates[dates.length - 1], L = H[last];
-    const prevOf = k => { for (let i = dates.length - 2; i >= 0; i--) if (H[dates[i]][k] != null) return H[dates[i]][k]; return null; };
-    const tiles = H_KEYS.filter(d => L[d.k] != null || prevOf(d.k) != null).map(d => {
-      const v = L[d.k] != null ? L[d.k] : (() => { for (let i = dates.length - 1; i >= 0; i--) if (H[dates[i]][d.k] != null) return H[dates[i]][d.k]; return null; })();
-      const pv = prevOf(d.k), diff = L[d.k] != null && pv != null ? L[d.k] - pv : null;
+    const sel = calSel || today();
+    const L = H[sel] || {};
+    const prevOf = k => { for (let i = dates.length - 1; i >= 0; i--) if (dates[i] < sel && H[dates[i]][k] != null) return H[dates[i]][k]; return null; };
+    const any = H_KEYS.some(d => L[d.k] != null);
+    const tiles = H_KEYS.map(d => {
+      const v = L[d.k], pv = prevOf(d.k), diff = v != null && pv != null ? v - pv : null;
       const dir = diff == null || Math.abs(diff) < 1e-9 ? 0 : Math.sign(diff), cls = !dir || !d.good ? '' : dir * d.good > 0 ? 'up' : 'down';
-      return `<button type="button" class="hl-tile${hSel === d.k ? ' on' : ''}" data-hk="${d.k}"><span>${d.lbl}</span><b>${fmtH(d, v)}</b>${diff != null && dir ? `<em class="${cls}">${dir > 0 ? '▲' : '▼'} ${fmtH(d, Math.abs(diff)).replace(/^0:(\d\d) h$/, '$1 min')}</em>` : '<em>&nbsp;</em>'}</button>`;
+      return `<button type="button" class="hl-tile${hSel === d.k ? ' on' : ''}${v == null ? ' none' : ''}" data-hk="${d.k}"><span>${d.lbl}</span><b>${fmtH(d, v)}</b>${diff != null && dir ? `<em class="${cls}">${dir > 0 ? '▲' : '▼'} ${fmtH(d, Math.abs(diff)).replace(/^0:(\d\d) h$/, '$1 min')}</em>` : '<em>&nbsp;</em>'}</button>`;
     }).join('');
     const def = H_KEYS.find(d => d.k === hSel) || H_KEYS[0];
-    const pts = dates.filter(d => H[d][def.k] != null).slice(-30).map(d => ({ d, v: H[d][def.k] }));
+    const pts = dates.filter(d => d <= sel && H[d][def.k] != null).slice(-30).map(d => ({ d, v: H[d][def.k] }));
     let chart = '<p class="muted small">Noch zu wenige Werte für einen Verlauf.</p>';
     if (pts.length >= 2){
       const W = 320, Hh = 120, pad = 22, min = Math.min(...pts.map(p => p.v)), max = Math.max(...pts.map(p => p.v)), rg = (max - min) || 1;
@@ -1842,12 +1852,16 @@ input[type=date]{width:100%;display:block}
         <text x="${W - 2}" y="${Y(max) + 4}" class="hl-ax" text-anchor="end">${fmtH(def, max)}</text>
         <text x="${W - 2}" y="${Y(min) + 4}" class="hl-ax" text-anchor="end">${fmtH(def, min)}</text></svg>`;
     }
-    $('#health').innerHTML = `<div class="card hl">${head}<p class="muted small" style="margin:0 0 10px">Stand ${esc(fmtDate(last))} · Pfeile im Vergleich zum Tag davor${hSyncInfo && data.healthKey ? ' · ' + hSyncInfo : ''}</p>
-      <div class="hl-grid">${tiles}</div><div class="hl-sel">${def.lbl}${pts.length ? ` · letzte ${pts.length} Tage` : ''}</div>${chart}</div>`;
+    $('#health').innerHTML = `<div class="card hl">${head}<p class="muted small" style="margin:0 0 10px">${esc(fmtDate(sel))}${any ? ' · Pfeile im Vergleich zum Tag davor' : ' · keine Health-Werte für diesen Tag'}</p>
+      <div class="hl-grid">${tiles}</div><div class="hl-sel">${def.lbl}${pts.length ? ` · bis ${shortDate(sel)}` : ''}</div>${chart}</div>`;
   }
-  $('#health').addEventListener('click', async e => {
+  $('#view-prog').addEventListener('click', async e => { if (!e.target.closest('#health')) return;
     const t = e.target.closest('[data-hk]'); if (t){ hSel = t.dataset.hk; renderHealth(); return; }
-    if (e.target.closest('.hl-sync')){ await syncHealth(null, true); renderHealth(); return; }
+    if (e.target.closest('.hl-sync')){
+      hMsg = 'Gleiche ab …'; hMsgErr = false; hSyncing = false; const p0 = syncHealth(null, false); renderHealth();
+      const ok = await p0; const n = Object.keys(data.health || {}).length;
+      hMsg = ok ? `Abgeglichen ✓ ${new Date().toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })} · ${n} ${n === 1 ? 'Tag' : 'Tage'}` : (hSyncInfo || 'Abgleich nicht möglich.'); hMsgErr = !ok;
+      renderHealth(); return; }
     if (e.target.closest('.hl-go')){ const c = ($('#hl-code').value || '').trim().toLowerCase(); if (!c) return;
       const ok = await syncHealth(c, true); renderHealth(); if (ok) say('Verbunden – Health-Werte kommen jetzt automatisch.'); return; }
     if (!e.target.closest('.hl-paste')) return;
@@ -2012,7 +2026,7 @@ input[type=date]{width:100%;display:block}
   });
   $('#editor').addEventListener('click', e => {
     const an = e.target.closest('[data-anim]');
-    if (an){ e.stopPropagation(); openExDialog(an.dataset.anim); return; }
+    if (an){ e.stopPropagation(); openExDialog(an.dataset.anim, true); return; }
     const btn = e.target.closest('[data-act]');
     if (!btn) return;
     const card = btn.closest('.ex');
@@ -2467,6 +2481,7 @@ input[type=date]{width:100%;display:block}
     const el = document.querySelector('#progress .vol'); if (!el) return;
     const all = [...data.sessions].sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id));
     el.outerHTML = volChart(all);
+    renderHealth();
   }
   $('#progress').addEventListener('click', e => {
     const n = e.target.closest('[data-cm]'); if (n){ calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + (+n.dataset.cm), 1); calSel = null; refreshVol(); return; }
@@ -2475,8 +2490,8 @@ input[type=date]{width:100%;display:block}
   function renderProgress(){
     const list = [...data.sessions].sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id));
     if (!list.length){
-      $('#progress').innerHTML = `<div class="empty">Hier siehst du, ob du dich verbesserst.<br>Speichere deine erste Session, dann geht's los.</div>`;
-      return;
+      $('#progress').innerHTML = `<div id="health"></div><div class="empty">Hier siehst du, ob du dich verbesserst.<br>Speichere deine erste Session, dann geht's los.</div>`;
+      renderHealth(); return;
     }
     const byName = new Map();
     list.forEach(s => s.exercises.forEach(e => {
@@ -2520,17 +2535,19 @@ input[type=date]{width:100%;display:block}
     const sec = (t, arr) => arr.length ? `<div class="p-group">${t}</div>${arr.map(row).join('')}` : '';
     $('#progress').innerHTML = `
       ${monthCard(list)}
+      ${volChart(list)}
+      <div id="health"></div>
       <p class="muted small" style="margin:0 0 8px">Vergleich: letzte Session gegen die davor, pro Übung</p>
       <div class="p-sum">
         <div class="p-tile up"><b>${up}</b><span>Besser</span></div>
         <div class="p-tile"><b>${same}</b><span>Gleich</span></div>
         <div class="p-tile down"><b>${down}</b><span>Schlechter</span></div>
       </div>
-      ${volChart(list)}
       ${muscleCard(list)}
       ${recordsCard(list)}
       ${[...dayNames, 'Sonstiges'].map(t => sec(esc(t), groups[t])).join('')}`;
     const vsc = document.querySelector('#progress .vscroll'); if (vsc) vsc.scrollLeft = vsc.scrollWidth;
+    renderHealth();
   }
 
 
