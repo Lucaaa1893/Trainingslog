@@ -716,6 +716,33 @@ input[type=date]{width:100%;display:block}
 :root[data-theme="dark"] .mbar{background:rgba(255,255,255,.07)}
 :root[data-theme="dark"] .cd:not(.has):not(.future){color:#E6E9EF}
 .monthsvg{display:block;width:100%;height:auto;margin:4px 0 6px}
+.meta-actions .ghost{white-space:nowrap;font-size:14px;padding:12px 4px;overflow:hidden;text-overflow:ellipsis}
+.edit-bar{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:10px 10px 10px 16px;border-radius:18px;color:#fff;font-weight:600;font-size:14px;background:var(--shine), linear-gradient(180deg,#FF9F2E,#F08A00);box-shadow:0 8px 20px -10px rgba(240,138,0,.8), inset 0 1px 0 rgba(255,255,255,.5)}
+.edit-bar span{flex:1;min-width:0}
+.edit-bar button{flex:none;border:0;border-radius:999px;padding:8px 14px;font:600 14px/1 var(--f-body);color:#B35F00;background:rgba(255,255,255,.9)}
+.past-hint{margin:10px 2px 0;font-size:13px;color:#B35F00;font-weight:500}
+.mood{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mood button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:18px;font:600 13px/1 var(--f-body);color:var(--muted);background:var(--drop-btn);border:1px solid rgba(255,255,255,.5);box-shadow:var(--drop-shadow);transition:transform .35s var(--spring), background .2s, color .2s}
+.mood button span{font-size:28px;line-height:1;filter:grayscale(.7);opacity:.7;transition:filter .2s, opacity .2s, transform .35s var(--spring)}
+.mood button[aria-checked="true"]{color:#fff;background:var(--shine), linear-gradient(180deg,#4B8EFF,#2F7BF5);transform:scale(1.04)}
+.mood button[aria-checked="true"] span{filter:none;opacity:1;transform:scale(1.12)}
+.fin textarea{resize:none;min-height:52px}
+.fin{margin-top:12px}
+.hx-head{display:flex;align-items:baseline;gap:8px;justify-content:space-between}
+.cmp{flex:none;font-size:12px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
+.cmp.up{color:var(--good,#1FAA50)} .cmp.down{color:var(--bad,#E2362C)}
+.chip.pr{border-color:rgba(255,190,40,.9);background:linear-gradient(180deg,rgba(255,226,140,.85),rgba(255,200,70,.55));box-shadow:inset 0 1px 1px #fff, 0 3px 10px -5px rgba(230,160,0,.7)}
+.ses-note{margin:0 0 12px;padding:10px 12px;border-radius:14px;font-size:14px;background:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.7);white-space:pre-wrap;overflow-wrap:anywhere}
+.ses-mood{font-size:18px;margin-left:6px;vertical-align:2px}
+.past-tag{font-size:11px;font-weight:600;color:#B35F00;background:rgba(255,159,46,.18);border-radius:999px;padding:2px 7px;margin-left:6px;vertical-align:3px}
+.hx-btns{display:flex;gap:8px;margin-top:12px}
+.hx-btns .ghost{margin-top:0;flex:1 1 0;min-width:0}
+:root[data-theme="dark"] .mood button{color:var(--muted);background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+:root[data-theme="dark"] .mood button[aria-checked="true"]{color:#fff;background:var(--shine), linear-gradient(180deg,#4B8EFF,#2F7BF5)}
+:root[data-theme="dark"] .ses-note{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1)}
+:root[data-theme="dark"] .chip.pr{color:#FFD66B;background:rgba(255,190,40,.16);border-color:rgba(255,200,70,.55);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+:root[data-theme="dark"] .past-hint{color:#FFB255}
+:root[data-theme="dark"] .past-tag{color:#FFB255}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -743,6 +770,7 @@ input[type=date]{width:100%;display:block}
 
 <!-- NEW SESSION -->
 <section id="view-new" role="tabpanel" aria-labelledby="tab-new">
+  <div class="edit-bar" id="edit-bar" hidden><span id="edit-txt">Training wird bearbeitet</span><button type="button" id="edit-cancel">Abbrechen</button></div>
   <div class="card">
     <div class="meta-row">
       <div>
@@ -754,8 +782,10 @@ input[type=date]{width:100%;display:block}
         <button class="select-btn" id="s-type" type="button" aria-labelledby="l-type s-type" aria-haspopup="menu" aria-expanded="false"><span id="s-type-label">Push</span></button>
       </div>
     </div>
+    <p class="past-hint" id="past-hint" hidden></p>
     <div class="meta-actions">
-      <button class="ghost alt" id="last-all" type="button" hidden>↺ Alle letzten</button>
+      <button class="ghost alt" id="backfill" type="button">Nachtragen</button>
+      <button class="ghost alt" id="last-all" type="button" hidden>Alle letzten</button>
       <button class="ghost alt clr" id="clear-all" type="button">Alle leeren</button>
     </div>
   </div>
@@ -763,6 +793,16 @@ input[type=date]{width:100%;display:block}
   <div id="editor"></div>
 
   <button class="ghost" id="add-ex" type="button">+ Übung hinzufügen</button>
+  <div class="card fin">
+    <span class="lbl" id="l-mood">Wie war das Training?</span>
+    <div class="mood" role="radiogroup" aria-labelledby="l-mood">
+      <button type="button" role="radio" data-mood="1" aria-checked="false"><span>😫</span>Platt</button>
+      <button type="button" role="radio" data-mood="2" aria-checked="false"><span>😐</span>Okay</button>
+      <button type="button" role="radio" data-mood="3" aria-checked="false"><span>💪</span>Stark</button>
+    </div>
+    <label class="lbl" for="s-note" style="margin-top:14px">Notiz zum Training</label>
+    <textarea id="s-note" rows="2" placeholder="z. B. wenig geschlafen, Schulter gezwickt …"></textarea>
+  </div>
   <div style="height:12px"></div>
   <button class="btn" id="save" type="button">Session speichern</button>
   <p class="status" id="status" role="status" aria-live="polite"></p>
@@ -790,7 +830,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 55</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 56</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -926,7 +966,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 55;
+  const MY_VERSION = 56;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1278,10 +1318,55 @@ input[type=date]{width:100%;display:block}
   TABS.forEach(t => $('#tab-' + t).addEventListener('click', () => { if (!tabHandled) showTab(t); }));
 
   // ---- editor ----
+  const MOODS = { 1: '😫', 2: '😐', 3: '💪' };
+  const MOOD_TXT = { 1: 'Platt', 2: 'Okay', 3: 'Stark' };
   function renderMeta(){
-    $('#s-date').value = data.draft.date;
-    $('#s-type').innerHTML = `<span>${esc(data.draft.type)}</span>${CHEV}`;
+    const d = data.draft;
+    $('#s-date').value = d.date;
+    $('#s-type').innerHTML = `<span>${esc(d.type)}</span>${CHEV}`;
+    if (document.activeElement !== $('#s-note')) $('#s-note').value = d.note || '';
+    document.querySelectorAll('.mood [data-mood]').forEach(b => b.setAttribute('aria-checked', String(Number(b.dataset.mood) === d.mood)));
+    const editing = d.editId != null;
+    $('#edit-bar').hidden = !editing;
+    if (editing) $('#edit-txt').textContent = `Bearbeitest: ${d.type} vom ${fmtDate(d.date)}`;
+    $('#save').textContent = editing ? 'Änderungen speichern' : 'Session speichern';
+    $('#backfill').hidden = editing;
+    const past = !editing && d.date && d.date < today();
+    $('#past-hint').hidden = !past;
+    if (past) $('#past-hint').textContent = `📅 Wird als Training vom ${fmtDate(d.date)} nachgetragen.`;
   }
+  $('#s-note').addEventListener('input', e => { data.draft.note = e.target.value; saveDraft(); });
+  $('.mood').addEventListener('click', e => {
+    const b = e.target.closest('[data-mood]'); if (!b) return;
+    const v = Number(b.dataset.mood);
+    data.draft.mood = data.draft.mood === v ? undefined : v;
+    saveDraft(); renderMeta();
+  });
+  $('#backfill').addEventListener('click', () => {
+    const inp = $('#s-date');
+    if (data.draft.date >= today()){ const y = new Date(Date.now() - 864e5); data.draft.date = new Date(y.getTime() - y.getTimezoneOffset()*60000).toISOString().slice(0,10); saveDraft(); renderMeta(); }
+    try { if (inp.showPicker) { inp.showPicker(); return; } } catch(_){}
+    inp.focus(); inp.click();
+  });
+  // ---- gespeichertes Training bearbeiten ----
+  function editSession(ses){
+    const cur = data.draft;
+    const keep = cur.editId != null ? cur.keep : cur;
+    const str = v => v == null ? '' : String(v);
+    data.draft = {
+      date: ses.date, type: ses.type, editId: ses.id, note: ses.note || '', mood: ses.mood, keep,
+      exercises: ses.exercises.map(e => ({ name: e.name, note: e.note || '', sets: e.sets.map(x => Object.assign(
+        { reps: x.reps ?? '', kg: str(x.kg) },
+        x.kind === 'warm' ? { kind: 'warm' } : x.kind === 'drop' ? { kind: 'drop', drops: dropsOf(x).map(d => ({ reps: d.reps ?? '', kg: str(d.kg) })) } : {})) }))
+    };
+    saveDraft(); renderMeta(); renderEditor(); showTab('new'); scrollTo(0, 0);
+  }
+  function endEdit(){
+    const k = data.draft.keep;
+    data.draft = k && Array.isArray(k.exercises) ? k : newDraft();
+    saveDraft(); renderMeta(); renderEditor();
+  }
+  $('#edit-cancel').addEventListener('click', () => { endEdit(); say(''); showTab('hist'); });
   function renderEditor(){
     const ex = data.draft.exercises;
     if (!ex.length){
@@ -1512,7 +1597,7 @@ input[type=date]{width:100%;display:block}
   $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') closePicker(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet').hidden) closePicker(); });
 
-  $('#s-date').addEventListener('input', e => { data.draft.date = e.target.value; saveDraft(); });
+  $('#s-date').addEventListener('input', e => { data.draft.date = e.target.value; saveDraft(); renderMeta(); });
 
 
   // ---- save session ----
@@ -1531,9 +1616,26 @@ input[type=date]{width:100%;display:block}
       say('Mindestens eine Übung mit Name und einem Satz eintragen.', true);
       return;
     }
+    const note = (d.note || '').trim();
+    if (d.editId != null){
+      const old = data.sessions.find(x => x.id === d.editId);
+      if (old){
+        old.date = d.date; old.type = d.type; old.exercises = exercises;
+        if (note) old.note = note; else delete old.note;
+        if (d.mood) old.mood = d.mood; else delete old.mood;
+      }
+      const k = d.keep; data.draft = k && Array.isArray(k.exercises) ? k : newDraft();
+      const ok = persist();
+      renderMeta(); renderEditor(); updateTimer();
+      say(ok ? (old ? 'Änderungen gespeichert.' : 'Training war gelöscht – nichts geändert.') : 'Der Browser speichert gerade nicht.', !ok || !old);
+      showTab('hist');
+      return;
+    }
     const before = data.sessions.slice();
     const ses = { id: Date.now(), date: d.date, type: d.type, exercises };
-    if (d.start) ses.duration = Math.max(1, Math.round((Date.now() - d.start) / 60000));
+    if (note) ses.note = note;
+    if (d.mood) ses.mood = d.mood;
+    if (d.start && d.date >= today()) ses.duration = Math.max(1, Math.round((Date.now() - d.start) / 60000));
     const prs = [];
     exercises.forEach(e => { const st = exStats(e), prev = bestEver(e.name, before); if (st.best != null && prev && st.best > prev.best + 0.01) prs.push({ name: e.name, set: st.bestSet, prev }); });
     data.sessions.push(ses);
@@ -1552,15 +1654,41 @@ input[type=date]{width:100%;display:block}
       $('#history').innerHTML = `<div class="empty">Noch keine Sessions gespeichert.</div>`;
       return;
     }
+    const chron = [...data.sessions].sort((a,b) => (a.date+a.id).localeCompare(b.date+b.id));
+    // Vergleich mit dem letzten Mal derselben Übung + Rekorde
+    const info = new Map();
+    chron.forEach((s, k) => {
+      const earlier = chron.slice(0, k);
+      info.set(s.id, s.exercises.map(e => {
+        const st = exStats(e);
+        let prevEx = null;
+        for (let q = k - 1; q >= 0 && !prevEx; q--) prevEx = chron[q].exercises.find(x => x.name === e.name) || null;
+        let cmp = null;
+        if (prevEx){
+          const ps = exStats(prevEx);
+          if (st.bestSet && ps.bestSet && st.bestSet.kg != null && ps.bestSet.kg != null && Math.abs(st.bestSet.kg - ps.bestSet.kg) > 0.01){
+            const dk = st.bestSet.kg - ps.bestSet.kg; cmp = { dir: Math.sign(dk), txt: (dk > 0 ? '▲ +' : '▼ −') + kg1(Math.abs(dk)) + ' kg' };
+          } else {
+            const a = st.bestSet ? st.bestSet.reps : st.reps, b = ps.bestSet ? ps.bestSet.reps : ps.reps;
+            if (a != null && b != null && a !== b) cmp = { dir: Math.sign(a - b), txt: (a > b ? '▲ +' : '▼ −') + Math.abs(a - b) + ' Wdh.' };
+            else cmp = { dir: 0, txt: '= wie letztes Mal' };
+          }
+        }
+        const prev = bestEver(e.name, earlier);
+        const pr = st.best != null && prev && st.best > prev.best + 0.01 ? st.bestSet : null;
+        return { cmp, pr };
+      }));
+    });
     $('#history').innerHTML = list.map(s => {
       const sets = s.exercises.reduce((n,e) => n + e.sets.length, 0);
+      const inf = info.get(s.id) || [];
       return `
       <div class="swipe" data-id="${s.id}">
       <div class="swipe-act"><button class="swipe-del" type="button" data-del="${s.id}" aria-label="Training vom ${esc(fmtDate(s.date))} löschen">${TRASH}</button></div>
       <details class="session">
         <summary>
           <div>
-            <div class="display" style="font-size:20px">${esc(fmtDate(s.date))}</div>
+            <div class="display" style="font-size:20px">${esc(fmtDate(s.date))}${s.mood && MOODS[s.mood] ? `<span class="ses-mood" title="${MOOD_TXT[s.mood]}" aria-label="Gefühl: ${MOOD_TXT[s.mood]}">${MOODS[s.mood]}</span>` : ''}${inf.some(x => x.pr) ? '<span class="ses-mood" aria-label="Neuer Rekord">🏆</span>' : ''}</div>
             <div class="muted small">${s.duration ? fmtDur(s.duration) + ' · ' : ''}${s.exercises.length} ${s.exercises.length===1?'Übung':'Übungen'} · ${sets} ${sets===1?'Satz':'Sätze'}${(()=>{const d=s.exercises.reduce((n,e)=>n+e.sets.filter(x=>x.kind==='drop').length,0);return d?` · ${d} Drop`:''})()}</div>
           </div>
           <div class="s-right">
@@ -1568,24 +1696,28 @@ input[type=date]{width:100%;display:block}
           </div>
         </summary>
         <div class="body">
-          ${s.exercises.map(e => `
+          ${s.note ? `<div class="ses-note">📝 ${esc(s.note)}</div>` : ''}
+          ${s.exercises.map((e, ei) => { const I = inf[ei] || {}; return `
             <div class="hx">
-              <div style="font-weight:600">${esc(e.name)}</div>
+              <div class="hx-head"><div style="font-weight:600">${esc(e.name)}</div>${I.cmp ? `<span class="cmp${I.cmp.dir > 0 ? ' up' : I.cmp.dir < 0 ? ' down' : ''}">${I.cmp.txt}</span>` : '<span class="cmp">neu</span>'}</div>
               ${e.note ? `<div class="muted small">${esc(e.note)}</div>` : ''}
               <div class="chips">
-                ${e.sets.map((x,j) => ` <span class="chip${x.kind==='drop'?' drop':''}${x.kind==='warm'?' warm':''}">${x.kind==='warm'?'Aufw.':'Satz ' + (j+1)}: ${x.reps ?? '–'} × ${fmtKg(x.kg)} kg${x.kind==='drop' ? (dropsOf(x).length ? dropsOf(x).map(d => ` ↘ ${d.reps ?? '–'} × ${fmtKg(d.kg)} kg`).join('') : ' · Drop') : ''}</span>`).join('')}
+                ${e.sets.map((x,j) => ` <span class="chip${x.kind==='drop'?' drop':''}${x.kind==='warm'?' warm':''}${x === I.pr ? ' pr' : ''}">${x === I.pr ? '🏆 ' : ''}${x.kind==='warm'?'Aufw.':'Satz ' + (j+1)}: ${x.reps ?? '–'} × ${fmtKg(x.kg)} kg${x.kind==='drop' ? (dropsOf(x).length ? dropsOf(x).map(d => ` ↘ ${d.reps ?? '–'} × ${fmtKg(d.kg)} kg`).join('') : ' · Drop') : ''}</span>`).join('')}
               </div>
-            </div>`).join('')}
-          <button class="ghost hx-share" type="button" data-share="${s.id}">Teilen-Karte erstellen</button>
+            </div>`; }).join('')}
+          <div class="hx-btns"><button class="ghost alt" type="button" data-edit="${s.id}">✎ Bearbeiten</button><button class="ghost" type="button" data-share="${s.id}">Teilen-Karte</button></div>
         </div>
       </details>
       </div>`;
     }).join('');
-    $('#history').insertAdjacentHTML('afterbegin', '<p class="swipe-hint">Zum Löschen ein Training nach links wischen</p>');
+    $('#history').insertAdjacentHTML('afterbegin', '<button class="ghost alt" type="button" id="hist-add" style="margin:0 0 12px">📅 Vergessenes Training nachtragen</button><p class="swipe-hint">Antippen zum Öffnen und Bearbeiten · nach links wischen zum Löschen</p>');
   }
   $('#history').addEventListener('click', e => {
+    if (e.target.closest('#hist-add')){ if (data.draft.editId != null) endEdit(); showTab('new'); scrollTo(0, 0); $('#backfill').click(); return; }
     const sh = e.target.closest('[data-share]');
     if (sh){ const ses = data.sessions.find(x => String(x.id) === sh.dataset.share); if (ses) showCard(ses, []); return; }
+    const ed = e.target.closest('[data-edit]');
+    if (ed){ const ses = data.sessions.find(x => String(x.id) === ed.dataset.edit); if (ses) editSession(ses); return; }
   });
   $('#history').addEventListener('click', e => {
     const b = e.target.closest('[data-del]');
@@ -1606,6 +1738,7 @@ input[type=date]{width:100%;display:block}
       // Maschineneinstellungen behalten
       ses.exercises.forEach(ex => { if (ex.note){ data.notes = data.notes || {}; if (!data.notes[ex.name]) data.notes[ex.name] = ex.note; } });
       data.sessions = data.sessions.filter(x => x !== ses);
+      if (data.draft.editId === ses.id){ const k = data.draft.keep; data.draft = k && Array.isArray(k.exercises) ? k : newDraft(); renderMeta(); }
       persist(); close(); renderHistory(); renderEditor();
       bsay(`Training vom ${fmtDate(ses.date)} gelöscht.`);
     });
