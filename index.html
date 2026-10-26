@@ -793,6 +793,10 @@ input[type=date]{width:100%;display:block}
 :root[data-theme="dark"] .exl-thumb{background:radial-gradient(120% 120% at 30% 0%, rgba(255,255,255,.12), rgba(255,255,255,.04));border-color:rgba(255,255,255,.1)}
 :root[data-theme="dark"] .exl-cat{color:#fff}
 .hl{margin-bottom:14px}
+.hl-key-row{display:flex;gap:8px}
+.hl-key-row input{flex:1;font-family:var(--f-mono);letter-spacing:.04em}
+.hl-key-row .btn{width:auto;margin:0;padding:0 18px}
+.hl-head .hl-sync{width:40px;height:40px;padding:0;font-size:18px;display:grid;place-items:center}
 .hl-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
 .hl-head h2{margin:0}
 .hl-head .ghost{width:auto;margin:0;padding:9px 14px;font-size:13px}
@@ -939,7 +943,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span hidden id="ver-txt">Version 82</span><span id="ver-label">Version 8.0</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span hidden id="ver-txt">Version 83</span><span id="ver-label">Version 8.1</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1088,7 +1092,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 82;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 83;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1777,12 +1781,42 @@ input[type=date]{width:100%;display:block}
   const fmtH = (def, v) => v == null ? '–' : def.k === 'sleep'
     ? `${Math.floor(v)}:${String(Math.round((v % 1) * 60)).padStart(2, '0')} h`
     : v.toLocaleString('de-DE', { maximumFractionDigits: def.dec, minimumFractionDigits: 0 }) + (def.unit && def.unit !== 'kcal' ? ' ' + def.unit : def.unit ? ' kcal' : '');
+  // automatischer Abgleich: verschlüsselte Datei health.enc.json von GitHub, Code nur auf diesem Gerät
+  const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  async function decryptHealth(o, code){
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(code), 'PBKDF2', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey({ name:'PBKDF2', salt:b64(o.salt), iterations:o.iter || 200000, hash:'SHA-256' }, base, { name:'AES-GCM', length:256 }, false, ['decrypt']);
+    const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv:b64(o.iv) }, key, b64(o.ct));
+    return JSON.parse(new TextDecoder().decode(pt));
+  }
+  let hSyncing = false, hSyncInfo = '';
+  async function syncHealth(code, manual){
+    code = code || data.healthKey; if (!code || hSyncing || !navigator.onLine || !(crypto && crypto.subtle)) return false;
+    hSyncing = true;
+    try {
+      const r = await fetch('./health.enc.json?check=' + Date.now(), { cache:'no-store' });
+      if (!r.ok) throw new Error('nf');
+      const all = await decryptHealth(await r.json(), code);
+      data.health = data.health || {};
+      Object.entries(all).forEach(([d, v]) => { data.health[d] = Object.assign({}, data.health[d] || {}, v); });
+      if (code !== data.healthKey) data.healthKey = code;
+      data.healthSync = Date.now(); persist(); hSyncInfo = '';
+      if (!$('#view-prog').hidden) renderHealth();
+      if (manual) say('Health-Werte abgeglichen.');
+      return true;
+    } catch(e){
+      hSyncInfo = e && e.name === 'OperationError' ? 'Code falsch.' : 'Abgleich gerade nicht möglich.';
+      if (manual) say(hSyncInfo, true);
+      return false;
+    } finally { hSyncing = false; }
+  }
   let hSel = 'weight';
   function renderHealth(){
     const H = data.health || {}, dates = Object.keys(H).sort();
-    const head = `<div class="hl-head"><h2>Körper & Erholung</h2><button type="button" class="ghost alt hl-paste">Werte einfügen</button></div>`;
+    const head = `<div class="hl-head"><h2>Körper & Erholung</h2>${data.healthKey ? '<button type="button" class="ghost alt hl-sync" aria-label="Jetzt abgleichen">↻</button>' : ''}</div>` +
+      (data.healthKey ? '' : `<div class="hl-key"><p class="muted small" style="margin:0 0 8px">Einmal den Code eingeben – danach kommen deine Health-Werte jeden Abend automatisch.</p><div class="hl-key-row"><input id="hl-code" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="xxxx-xxxx-xxxx-xxxx"><button type="button" class="btn hl-go">OK</button></div>${hSyncInfo ? `<p class="nx-err" style="color:var(--bad,#E2362C)">${hSyncInfo}</p>` : ''}</div>`);
     if (!dates.length){
-      $('#health').innerHTML = `<div class="card hl">${head}<p class="muted small" style="margin:6px 0 0">Noch keine Werte. Füge die Werte aus deinem Kurzbefehl „Health Export“ ein: Text aus der Mail kopieren und auf „Werte einfügen“ tippen – oder den Kurzbefehl den Text in die Zwischenablage legen lassen.</p></div>`;
+      $('#health').innerHTML = `<div class="card hl">${head}${data.healthKey ? '<p class="muted small" style="margin:6px 0 0">Noch keine Werte – die ersten kommen nach dem nächsten Abend-Export.</p>' : ''}</div>`;
       return;
     }
     const last = dates[dates.length - 1], L = H[last];
@@ -1808,11 +1842,14 @@ input[type=date]{width:100%;display:block}
         <text x="${W - 2}" y="${Y(max) + 4}" class="hl-ax" text-anchor="end">${fmtH(def, max)}</text>
         <text x="${W - 2}" y="${Y(min) + 4}" class="hl-ax" text-anchor="end">${fmtH(def, min)}</text></svg>`;
     }
-    $('#health').innerHTML = `<div class="card hl">${head}<p class="muted small" style="margin:0 0 10px">Stand ${esc(fmtDate(last))} · Pfeile im Vergleich zum Tag davor</p>
+    $('#health').innerHTML = `<div class="card hl">${head}<p class="muted small" style="margin:0 0 10px">Stand ${esc(fmtDate(last))} · Pfeile im Vergleich zum Tag davor${hSyncInfo && data.healthKey ? ' · ' + hSyncInfo : ''}</p>
       <div class="hl-grid">${tiles}</div><div class="hl-sel">${def.lbl}${pts.length ? ` · letzte ${pts.length} Tage` : ''}</div>${chart}</div>`;
   }
   $('#health').addEventListener('click', async e => {
     const t = e.target.closest('[data-hk]'); if (t){ hSel = t.dataset.hk; renderHealth(); return; }
+    if (e.target.closest('.hl-sync')){ await syncHealth(null, true); renderHealth(); return; }
+    if (e.target.closest('.hl-go')){ const c = ($('#hl-code').value || '').trim().toLowerCase(); if (!c) return;
+      const ok = await syncHealth(c, true); renderHealth(); if (ok) say('Verbunden – Health-Werte kommen jetzt automatisch.'); return; }
     if (!e.target.closest('.hl-paste')) return;
     let txt = '';
     try { txt = await navigator.clipboard.readText(); } catch(_){}
@@ -2833,7 +2870,8 @@ input[type=date]{width:100%;display:block}
 
   // ---- init ----
   if (data.draft) delete data.draft.manualDay;   // beim Start immer heute
-  syncDate(); renderMeta(); loadImgs();
+  syncDate(); renderMeta(); loadImgs(); setTimeout(() => syncHealth(), 800);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && (!data.healthSync || Date.now() - data.healthSync > 30 * 60000)) syncHealth(); });
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(_){}   // iPhone soll Daten/Bilder nicht wegräumen
   renderEditor(); updateTimer();
   if (!storageOk) say('Hinweis: Der Browser erlaubt hier kein Speichern. Daten gehen beim Schließen verloren.', true);
@@ -2854,7 +2892,7 @@ input[type=date]{width:100%;display:block}
       const keys = await mediaDo('readonly', st => st.getAllKeys());
       for (const k of keys || []){ const blob = await mediaDo('readonly', st => st.get(k)); const d = blob && await toData(blob); if (d) images[k] = d; }
     } catch(_){}
-    const json = JSON.stringify({ app:'trainingslog', version:2, exported:new Date().toISOString(), sessions:data.sessions, custom:data.custom, days:data.days, notes:data.notes, imgFit:data.imgFit, renames:data.renames, health:data.health, images }, null, 1);
+    const json = JSON.stringify({ app:'trainingslog', version:2, exported:new Date().toISOString(), sessions:data.sessions, custom:data.custom, days:data.days, notes:data.notes, imgFit:data.imgFit, renames:data.renames, health:data.health, healthKey:data.healthKey, images }, null, 1);
     const name = 'trainingslog-' + today() + '.json';
     try {
       const file = new File([json], name, { type:'application/json' });
@@ -2879,6 +2917,7 @@ input[type=date]{width:100%;display:block}
       if (Array.isArray(obj.custom)){ data.custom = data.custom || []; obj.custom.forEach(c => { if (c && c.name && !data.custom.some(x => x.name === c.name)) data.custom.push(c); }); }
       if (Array.isArray(obj.days) && !data.days) data.days = obj.days;
       if (obj.notes) data.notes = Object.assign({}, obj.notes, data.notes || {});
+      if (obj.healthKey && !data.healthKey) data.healthKey = obj.healthKey;
       if (obj.health) data.health = Object.assign({}, obj.health, data.health || {});
       if (obj.renames) data.renames = Object.assign({}, obj.renames, data.renames || {});
       if (obj.imgFit) data.imgFit = Object.assign({}, data.imgFit || {}, obj.imgFit);
