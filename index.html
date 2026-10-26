@@ -891,7 +891,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span hidden id="ver-txt">Version 74</span><span id="ver-label">Version 6.7</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span hidden id="ver-txt">Version 75</span><span id="ver-label">Version 6.8</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1027,7 +1027,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 74;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 75;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1472,7 +1472,7 @@ input[type=date]{width:100%;display:block}
     return `<svg class="exanim" viewBox="0 -8 120 106" aria-hidden="true"><line class="gnd" x1="4" y1="96" x2="116" y2="96"/>${out}</svg>`;
   }
   // ---- eigene Bilder/GIFs pro Übung (nur auf diesem Gerät, IndexedDB) ----
-  const exImg = new Map();
+  const exImg = new Map(); let exImgReady = false;
   const mediaDB = () => new Promise((ok, no) => { try { const r = indexedDB.open('tl-media', 1); r.onupgradeneeded = () => r.result.createObjectStore('img'); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); } catch (err){ no(err); } });
   async function mediaDo(mode, fn){ const db = await mediaDB(); return new Promise((ok, no) => { const tx = db.transaction('img', mode); const req = fn(tx.objectStore('img')); tx.oncomplete = () => ok(req && req.result); tx.onerror = () => no(tx.error); }); }
   async function loadImgs(){
@@ -1480,6 +1480,7 @@ input[type=date]{width:100%;display:block}
       const keys = await mediaDo('readonly', st => st.getAllKeys());
       for (const k of keys || []){ const blob = await mediaDo('readonly', st => st.get(k)); if (blob) exImg.set(k, URL.createObjectURL(blob)); }
       if (exImg.size) renderEditor();
+      exImgReady = true;
     } catch (_){}
   }
   async function setImg(name, blob){
@@ -2552,7 +2553,9 @@ input[type=date]{width:100%;display:block}
 
   // ---- init ----
   if (data.draft) delete data.draft.manualDay;   // beim Start immer heute
-  syncDate(); renderMeta(); loadImgs(); renderEditor(); updateTimer();
+  syncDate(); renderMeta(); loadImgs();
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(_){}   // iPhone soll Daten/Bilder nicht wegräumen
+  renderEditor(); updateTimer();
   if (!storageOk) say('Hinweis: Der Browser erlaubt hier kein Speichern. Daten gehen beim Schließen verloren.', true);
   else say('Funktioniert auch offline. Daten bleiben auf diesem Gerät.');
   showTab('new');
@@ -2564,7 +2567,14 @@ input[type=date]{width:100%;display:block}
   // ---- backup ----
   function bsay(m, err){ const el = $('#bstatus'); el.textContent = m; el.classList.toggle('err', !!err); }
   $('#exp').addEventListener('click', async () => {
-    const json = JSON.stringify({ app:'trainingslog', version:1, exported:new Date().toISOString(), sessions:data.sessions }, null, 1);
+    // eigene Bilder/GIFs mitsichern (als Text eingebettet)
+    const images = {};
+    try {
+      const toData = b => new Promise(ok => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => ok(null); r.readAsDataURL(b); });
+      const keys = await mediaDo('readonly', st => st.getAllKeys());
+      for (const k of keys || []){ const blob = await mediaDo('readonly', st => st.get(k)); const d = blob && await toData(blob); if (d) images[k] = d; }
+    } catch(_){}
+    const json = JSON.stringify({ app:'trainingslog', version:2, exported:new Date().toISOString(), sessions:data.sessions, custom:data.custom, days:data.days, notes:data.notes, imgFit:data.imgFit, images }, null, 1);
     const name = 'trainingslog-' + today() + '.json';
     try {
       const file = new File([json], name, { type:'application/json' });
@@ -2584,8 +2594,17 @@ input[type=date]{width:100%;display:block}
     const ids = new Set(data.sessions.map(s => String(s.id)));
     let n = 0;
     list.forEach(s => { if (s && s.date && Array.isArray(s.exercises) && !ids.has(String(s.id))) { data.sessions.push(s); ids.add(String(s.id)); n++; } });
+    let m = 0;
+    if (!Array.isArray(obj)){
+      if (Array.isArray(obj.custom)){ data.custom = data.custom || []; obj.custom.forEach(c => { if (c && c.name && !data.custom.some(x => x.name === c.name)) data.custom.push(c); }); }
+      if (Array.isArray(obj.days) && !data.days) data.days = obj.days;
+      if (obj.notes) data.notes = Object.assign({}, obj.notes, data.notes || {});
+      if (obj.imgFit) data.imgFit = Object.assign({}, data.imgFit || {}, obj.imgFit);
+      if (obj.images) Object.entries(obj.images).forEach(([k, d]) => { m++;
+        fetch(d).then(r => r.blob()).then(b => setImg(k, b)).then(() => renderEditor()).catch(() => {}); });
+    }
     persist(); renderHistory(); renderEditor();
-    bsay(n + ' Session(s) importiert.');
+    bsay(n + ' Session(s) importiert' + (m ? ` · ${m} Bild(er)` : '') + '.');
   }
   $('#imp-btn').addEventListener('click', () => $('#imp-file').click());
   $('#imp-file').addEventListener('change', e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => importJson(r.result); r.readAsText(f); e.target.value=''; });
