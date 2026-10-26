@@ -792,6 +792,23 @@ input[type=date]{width:100%;display:block}
 .anim-dlg .ex-own{margin-bottom:10px}
 :root[data-theme="dark"] .exl-thumb{background:radial-gradient(120% 120% at 30% 0%, rgba(255,255,255,.12), rgba(255,255,255,.04));border-color:rgba(255,255,255,.1)}
 :root[data-theme="dark"] .exl-cat{color:#fff}
+.hl{margin-bottom:14px}
+.hl-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.hl-head h2{margin:0}
+.hl-head .ghost{width:auto;margin:0;padding:9px 14px;font-size:13px}
+.hl-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.hl-tile{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:10px;border-radius:16px;border:1px solid rgba(255,255,255,.7);background:rgba(255,255,255,.5);text-align:left;color:var(--fg);font:inherit;cursor:pointer;min-width:0}
+.hl-tile span{font-size:11px;color:var(--muted);font-weight:600}
+.hl-tile b{font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.hl-tile em{font-style:normal;font-size:11px;font-weight:700;color:var(--muted)}
+.hl-tile em.up{color:var(--good,#1FAA50)} .hl-tile em.down{color:var(--bad,#E2362C)}
+.hl-tile.on{border-color:var(--accent);box-shadow:0 0 0 2px rgba(47,123,245,.25)}
+.hl-sel{font-size:13px;font-weight:700;margin:14px 2px 4px}
+.hl-chart{width:100%;height:auto;display:block}
+.hl-ax{font:600 10px var(--f-body);fill:var(--muted)}
+#hp-txt{font:13px/1.4 var(--f-mono)}
+:root[data-theme="dark"] .hl-tile{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1)}
+:root[data-theme="dark"] .hl-tile.on{border-color:#4B8EFF}
 .size-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:12px;color:#fff;font-weight:600;font-size:14px}
 .size-row .sz{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.16);color:#fff;font:600 24px/1 var(--f-body);display:grid;place-items:center;padding:0}
 .align-hint{margin:12px 0 0;font-size:13px;font-weight:600;color:#fff}
@@ -918,10 +935,11 @@ input[type=date]{width:100%;display:block}
 </section>
 
 <section id="view-prog" role="tabpanel" aria-labelledby="tab-prog" hidden>
+  <div id="health"></div>
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span hidden id="ver-txt">Version 81</span><span id="ver-label">Version 7.5</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span hidden id="ver-txt">Version 82</span><span id="ver-label">Version 8.0</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1070,7 +1088,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 81;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 82;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1330,7 +1348,7 @@ input[type=date]{width:100%;display:block}
     const view = $('#view-' + which); if (view && !reduce){ view.classList.remove('pop-in'); void view.offsetWidth; view.classList.add('pop-in'); }
     updateLevelChip();
     if (which === 'hist') renderHistory();
-    if (which === 'prog') renderProgress();
+    if (which === 'prog'){ renderHealth(); renderProgress(); }
     if (which === 'ex') renderExList();
     if (typeof sheen === 'function' && !reduce) requestAnimationFrame(sheen);
   }
@@ -1722,6 +1740,98 @@ input[type=date]{width:100%;display:block}
     };
     draw(); bg.addEventListener('click', ev => { if (ev.target === bg) bg.remove(); });
     document.body.append(bg); setTimeout(() => { const i = bg.querySelector('#nx-name'); if (i) i.focus(); }, 50);
+  });
+  // ---- Körper & Erholung: Werte aus dem Kurzbefehl „Health Export“ ----
+  const H_KEYS = [
+    { k:'weight', re:/gewicht/i,            lbl:'Gewicht',      unit:'kg',   dec:2, good:0 },
+    { k:'fat',    re:/k[öo]rperfett/i,      lbl:'Körperfett',   unit:'%',    dec:1, good:-1 },
+    { k:'muscle', re:/muskel/i,             lbl:'Muskelmasse',  unit:'kg',   dec:1, good:1 },
+    { k:'bmi',    re:/bmi/i,                lbl:'BMI',          unit:'',     dec:1, good:0 },
+    { k:'sleep',  re:/schlaf/i,             lbl:'Schlaf',       unit:'h',    dec:1, good:1 },
+    { k:'steps',  re:/schritte/i,           lbl:'Schritte',     unit:'',     dec:0, good:1 },
+    { k:'kcal',   re:/kalorien/i,           lbl:'Aktive kcal',  unit:'kcal', dec:0, good:1 },
+    { k:'rhr',    re:/ruhepuls/i,           lbl:'Ruhepuls',     unit:'bpm',  dec:0, good:-1 },
+    { k:'hrv',    re:/hrv/i,                lbl:'HRV',          unit:'ms',   dec:0, good:1 }
+  ];
+  function parseHealth(txt){
+    const out = {}; let date = null;
+    String(txt).split(/\r?\n/).forEach(line => {
+      const m = /^\s*([^:]+):\s*(.*)$/.exec(line); if (!m) return;
+      const key = m[1].trim(), raw = m[2].trim();
+      if (/datum/i.test(key)){ const d = /(\d{4}-\d{2}-\d{2})/.exec(raw); if (d) date = d[1]; return; }
+      const def = H_KEYS.find(h => h.re.test(key)); if (!def || !raw) return;
+      let v = parseFloat(raw.split(/\s/)[0].replace(',', '.'));
+      if (!isFinite(v)) return;
+      if (def.k === 'sleep') v = v > 48 ? v / 3600 : v;        // Sekunden → Stunden
+      if (def.k === 'weight' && v > 400) return;               // kaputter Wert (Rundungsfehler)
+      out[def.k] = Math.round(v * 100) / 100;
+    });
+    return Object.keys(out).length ? { date: date || today(), vals: out } : null;
+  }
+  function addHealth(txt){
+    const r = parseHealth(txt); if (!r) return false;
+    data.health = data.health || {};
+    data.health[r.date] = Object.assign({}, data.health[r.date] || {}, r.vals);
+    persist(); return r.date;
+  }
+  const fmtH = (def, v) => v == null ? '–' : def.k === 'sleep'
+    ? `${Math.floor(v)}:${String(Math.round((v % 1) * 60)).padStart(2, '0')} h`
+    : v.toLocaleString('de-DE', { maximumFractionDigits: def.dec, minimumFractionDigits: 0 }) + (def.unit && def.unit !== 'kcal' ? ' ' + def.unit : def.unit ? ' kcal' : '');
+  let hSel = 'weight';
+  function renderHealth(){
+    const H = data.health || {}, dates = Object.keys(H).sort();
+    const head = `<div class="hl-head"><h2>Körper & Erholung</h2><button type="button" class="ghost alt hl-paste">Werte einfügen</button></div>`;
+    if (!dates.length){
+      $('#health').innerHTML = `<div class="card hl">${head}<p class="muted small" style="margin:6px 0 0">Noch keine Werte. Füge die Werte aus deinem Kurzbefehl „Health Export“ ein: Text aus der Mail kopieren und auf „Werte einfügen“ tippen – oder den Kurzbefehl den Text in die Zwischenablage legen lassen.</p></div>`;
+      return;
+    }
+    const last = dates[dates.length - 1], L = H[last];
+    const prevOf = k => { for (let i = dates.length - 2; i >= 0; i--) if (H[dates[i]][k] != null) return H[dates[i]][k]; return null; };
+    const tiles = H_KEYS.filter(d => L[d.k] != null || prevOf(d.k) != null).map(d => {
+      const v = L[d.k] != null ? L[d.k] : (() => { for (let i = dates.length - 1; i >= 0; i--) if (H[dates[i]][d.k] != null) return H[dates[i]][d.k]; return null; })();
+      const pv = prevOf(d.k), diff = L[d.k] != null && pv != null ? L[d.k] - pv : null;
+      const dir = diff == null || Math.abs(diff) < 1e-9 ? 0 : Math.sign(diff), cls = !dir || !d.good ? '' : dir * d.good > 0 ? 'up' : 'down';
+      return `<button type="button" class="hl-tile${hSel === d.k ? ' on' : ''}" data-hk="${d.k}"><span>${d.lbl}</span><b>${fmtH(d, v)}</b>${diff != null && dir ? `<em class="${cls}">${dir > 0 ? '▲' : '▼'} ${fmtH(d, Math.abs(diff)).replace(/^0:(\d\d) h$/, '$1 min')}</em>` : '<em>&nbsp;</em>'}</button>`;
+    }).join('');
+    const def = H_KEYS.find(d => d.k === hSel) || H_KEYS[0];
+    const pts = dates.filter(d => H[d][def.k] != null).slice(-30).map(d => ({ d, v: H[d][def.k] }));
+    let chart = '<p class="muted small">Noch zu wenige Werte für einen Verlauf.</p>';
+    if (pts.length >= 2){
+      const W = 320, Hh = 120, pad = 22, min = Math.min(...pts.map(p => p.v)), max = Math.max(...pts.map(p => p.v)), rg = (max - min) || 1;
+      const X = i => pad + i * (W - pad - 70) / (pts.length - 1), Y = v => 12 + (1 - (v - min) / rg) * (Hh - 34);
+      const path = pts.map((p, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.v).toFixed(1)).join(' ');
+      chart = `<svg class="hl-chart" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Verlauf ${def.lbl}">
+        <path d="${path} L${X(pts.length - 1).toFixed(1)} ${Hh - 20} L${pad} ${Hh - 20} Z" fill="var(--accent)" opacity=".1"/>
+        <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+        ${pts.map((p, i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="${i === pts.length - 1 ? 4 : 2.6}" fill="var(--accent)"/>`).join('')}
+        <text x="${pad}" y="${Hh - 4}" class="hl-ax">${shortDate(pts[0].d)}</text><text x="${X(pts.length - 1)}" y="${Hh - 4}" class="hl-ax" text-anchor="middle">${shortDate(pts[pts.length - 1].d)}</text>
+        <text x="${W - 2}" y="${Y(max) + 4}" class="hl-ax" text-anchor="end">${fmtH(def, max)}</text>
+        <text x="${W - 2}" y="${Y(min) + 4}" class="hl-ax" text-anchor="end">${fmtH(def, min)}</text></svg>`;
+    }
+    $('#health').innerHTML = `<div class="card hl">${head}<p class="muted small" style="margin:0 0 10px">Stand ${esc(fmtDate(last))} · Pfeile im Vergleich zum Tag davor</p>
+      <div class="hl-grid">${tiles}</div><div class="hl-sel">${def.lbl}${pts.length ? ` · letzte ${pts.length} Tage` : ''}</div>${chart}</div>`;
+  }
+  $('#health').addEventListener('click', async e => {
+    const t = e.target.closest('[data-hk]'); if (t){ hSel = t.dataset.hk; renderHealth(); return; }
+    if (!e.target.closest('.hl-paste')) return;
+    let txt = '';
+    try { txt = await navigator.clipboard.readText(); } catch(_){}
+    const d = txt && addHealth(txt);
+    if (d){ renderHealth(); say(`Health-Werte vom ${fmtDate(d)} übernommen.`); return; }
+    // Fallback: Text von Hand einfügen
+    const bg = document.createElement('div'); bg.className = 'dlg-bg';
+    bg.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="hp-t"><h2 id="hp-t">Health-Werte einfügen</h2>
+      <p class="dlg-sub">Den Text aus der Mail „Health Export“ kopieren und hier einfügen.</p>
+      <textarea id="hp-txt" rows="7" placeholder="Datum: …&#10;Gewicht: …&#10;Schlaf: …"></textarea><p class="nx-err" hidden></p>
+      <div class="dlg-btns" style="margin-top:12px"><button type="button" class="dlg-cancel">Abbrechen</button><button type="button" class="dlg-ok hp-ok">Übernehmen</button></div></div>`;
+    document.body.append(bg);
+    const close = () => bg.remove();
+    bg.addEventListener('click', ev => { if (ev.target === bg) close(); });
+    bg.querySelector('.dlg-cancel').addEventListener('click', close);
+    bg.querySelector('.hp-ok').addEventListener('click', () => { const d2 = addHealth(bg.querySelector('#hp-txt').value);
+      if (!d2){ const er = bg.querySelector('.nx-err'); er.hidden = false; er.textContent = 'Keine Werte gefunden.'; return; }
+      close(); renderHealth(); say(`Health-Werte vom ${fmtDate(d2)} übernommen.`); });
+    setTimeout(() => bg.querySelector('#hp-txt').focus(), 50);
   });
   // ---- editor ----
   const MOODS = { 1: '😫', 2: '😕', 3: '😐', 4: '🙂', 5: '💪' };
@@ -2744,7 +2854,7 @@ input[type=date]{width:100%;display:block}
       const keys = await mediaDo('readonly', st => st.getAllKeys());
       for (const k of keys || []){ const blob = await mediaDo('readonly', st => st.get(k)); const d = blob && await toData(blob); if (d) images[k] = d; }
     } catch(_){}
-    const json = JSON.stringify({ app:'trainingslog', version:2, exported:new Date().toISOString(), sessions:data.sessions, custom:data.custom, days:data.days, notes:data.notes, imgFit:data.imgFit, renames:data.renames, images }, null, 1);
+    const json = JSON.stringify({ app:'trainingslog', version:2, exported:new Date().toISOString(), sessions:data.sessions, custom:data.custom, days:data.days, notes:data.notes, imgFit:data.imgFit, renames:data.renames, health:data.health, images }, null, 1);
     const name = 'trainingslog-' + today() + '.json';
     try {
       const file = new File([json], name, { type:'application/json' });
@@ -2769,6 +2879,7 @@ input[type=date]{width:100%;display:block}
       if (Array.isArray(obj.custom)){ data.custom = data.custom || []; obj.custom.forEach(c => { if (c && c.name && !data.custom.some(x => x.name === c.name)) data.custom.push(c); }); }
       if (Array.isArray(obj.days) && !data.days) data.days = obj.days;
       if (obj.notes) data.notes = Object.assign({}, obj.notes, data.notes || {});
+      if (obj.health) data.health = Object.assign({}, obj.health, data.health || {});
       if (obj.renames) data.renames = Object.assign({}, obj.renames, data.renames || {});
       if (obj.imgFit) data.imgFit = Object.assign({}, data.imgFit || {}, obj.imgFit);
       if (obj.images) Object.entries(obj.images).forEach(([k, d]) => { m++;
