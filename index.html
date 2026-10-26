@@ -446,7 +446,7 @@ input[type=date]{width:100%;display:block}
 .cal-head .icon{width:36px;height:36px;font-size:22px;line-height:1;padding-bottom:2px}
 .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px 4px;margin-bottom:12px}
 .cw{text-align:center;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;padding-bottom:2px}
-.cd{aspect-ratio:1;max-width:100%;width:100%;max-height:44px;justify-self:center;border:0;border-radius:50%;background:transparent;color:var(--fg);font:600 15px/1 var(--f-body);font-variant-numeric:tabular-nums;display:grid;place-items:center;padding:0}
+.cd{aspect-ratio:1;width:min(100%,44px);height:auto;justify-self:center;border:0;border-radius:50%;background:transparent;color:var(--fg);font:600 15px/1 var(--f-body);font-variant-numeric:tabular-nums;display:grid;place-items:center;padding:0}
 .cd.empty{visibility:hidden}
 .cd.future{color:rgba(60,70,90,.35)}
 .cd.today:not(.has){box-shadow:inset 0 0 0 2px var(--accent);color:var(--accent-text)}
@@ -943,7 +943,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span hidden id="ver-txt">Version 83</span><span id="ver-label">Version 8.1</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span hidden id="ver-txt">Version 84</span><span id="ver-label">Version 8.2</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1092,7 +1092,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 83;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 84;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -2403,7 +2403,7 @@ input[type=date]{width:100%;display:block}
   }
   const kg1 = n => (Math.round(n * 10) / 10).toString().replace('.', ',');
   // ---- Kalender-Übersicht ----
-  let calMonth = null, calSel = null;
+  let calMonth = null, calSel = null, calDay = null;
   const sesVol = s => s.exercises.reduce((a, e) => a + exStats(e).vol, 0);
   const sesSets = s => s.exercises.reduce((a, e) => a + e.sets.length, 0);
   const typeCol = t => t === 'Push' ? '#2F7BF5' : t === 'Pull' ? '#9358F2' : dayColor(t);
@@ -2411,6 +2411,7 @@ input[type=date]{width:100%;display:block}
   const isoDay = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   function volChart(all){
     const now = new Date();
+    if (calDay !== isoDay(now)){ calDay = isoDay(now); calMonth = null; calSel = null; }   // neuer Tag → zurück auf heute
     if (!calMonth) calMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const y = calMonth.getFullYear(), m = calMonth.getMonth(), prefix = `${y}-${String(m + 1).padStart(2, '0')}`;
     const byDay = new Map();
@@ -2419,7 +2420,7 @@ input[type=date]{width:100%;display:block}
     const monthSes = all.filter(s => s.date.startsWith(prefix));
     const pm = new Date(y, m - 1, 1), prevPrefix = `${pm.getFullYear()}-${String(pm.getMonth() + 1).padStart(2, '0')}`;
     const prevCount = all.filter(s => s.date.startsWith(prevPrefix)).length;
-    if (!calSel || !calSel.startsWith(prefix)) calSel = monthSes.length ? monthSes[monthSes.length - 1].date : (today.startsWith(prefix) ? today : null);
+    if (!calSel || !calSel.startsWith(prefix)) calSel = today.startsWith(prefix) ? today : (monthSes.length ? monthSes[monthSes.length - 1].date : null);
     let cells = '';
     for (let i = 0; i < lead; i++) cells += '<span class="cd empty" aria-hidden="true"></span>';
     for (let d = 1; d <= daysIn; d++){
