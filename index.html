@@ -921,7 +921,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span hidden id="ver-txt">Version 80</span><span id="ver-label">Version 7.4</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span hidden id="ver-txt">Version 81</span><span id="ver-label">Version 7.5</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -984,6 +984,8 @@ input[type=date]{width:100%;display:block}
       'Adduktoren'
     ]
   };
+  // umbenannte feste Übungen (Original-Name → eigener Name)
+  const tplName = n => (data.renames && data.renames[n]) || n;
   function lastNote(name){
     for (let k = data.sessions.length - 1; k >= 0; k--){
       const e = data.sessions[k].exercises.find(x => x.name === name);
@@ -1001,7 +1003,7 @@ input[type=date]{width:100%;display:block}
   // Übungsliste eines Tages: Push/Pull immer in der ursprünglichen Reihenfolge,
   // eigene Tage in der Reihenfolge, in der ihre Übungen angelegt wurden
   function templateFor(type){
-    if (TEMPLATES[type]) return TEMPLATES[type].slice();
+    if (TEMPLATES[type]) return TEMPLATES[type].map(tplName);
     return (data.custom || []).filter(c => typeof c === 'object' && c.cat === type).map(c => c.name);
   }
   function fromTemplate(type){
@@ -1068,7 +1070,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 80;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 81;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1583,7 +1585,7 @@ input[type=date]{width:100%;display:block}
         <div class="anim-acts"><label class="ghost alt anim-pick">${exImg.has(n) ? 'Anderes Bild/GIF' : 'Eigenes Bild/GIF wählen'}<input type="file" accept="image/*" hidden></label>${exImg.has(n) ? '<button type="button" class="ghost alt clr anim-rm">Entfernen</button>' : ''}</div>
         ${exImg.has(n) ? (aligning ? '<div class="size-row"><button type="button" class="sz" data-sz="-1" aria-label="Kleiner">−</button><span>Größe</span><button type="button" class="sz" data-sz="1" aria-label="Größer">+</button></div><p class="align-hint">Mit einem Finger verschieben, mit zwei Fingern größer/kleiner ziehen, dann „Fertig“.</p><button type="button" class="ghost align-done">Fertig</button>' : '') : ''}
         <p class="dlg-sub anim-note">Wird nur auf diesem Gerät gespeichert.</p>
-        ${isCustomEx(n) ? '<div class="anim-acts ex-own"><button type="button" class="ghost alt ex-ren">Namen ändern</button><button type="button" class="ghost alt clr ex-del">Übung löschen</button></div>' : ''}
+        <div class="anim-acts ex-own"><button type="button" class="ghost alt ex-ren">Namen ändern</button>${isCustomEx(n) ? '<button type="button" class="ghost alt clr ex-del">Übung löschen</button>' : ''}</div>
         <div class="dlg-btns"><button type="button" class="dlg-ok">Schließen</button></div></div>`;
         bg.querySelector('input[type=file]').addEventListener('change', async ev => { const f = ev.target.files[0]; if (!f) return; try { await setImg(n, f); data.imgFit = data.imgFit || {}; delete data.imgFit[n]; persist(); aligning = true; } catch (_){ say('Bild konnte nicht gespeichert werden.', true); } draw(); refreshEx(); });
         const ad = bg.querySelector('.align-done'); if (ad) ad.addEventListener('click', () => { aligning = false; draw(); refreshEx(); });
@@ -1638,6 +1640,8 @@ input[type=date]{width:100%;display:block}
   }
   // eigene Übung umbenennen – überall: Liste, gespeicherte Trainings, Entwurf, Notizen, Bild
   async function renameEx(oldN, newN){
+    const orig = Object.values(TEMPLATES).flat().find(t => tplName(t) === oldN);
+    if (orig){ data.renames = data.renames || {}; if (orig === newN) delete data.renames[orig]; else data.renames[orig] = newN; }
     (data.custom || []).forEach((c, k) => { if (typeof c === 'string' ? c === oldN : c.name === oldN){ if (typeof c === 'string') data.custom[k] = newN; else c.name = newN; } });
     data.sessions.forEach(s => s.exercises.forEach(e => { if (e.name === oldN) e.name = newN; }));
     const fix = d => d && Array.isArray(d.exercises) && d.exercises.forEach(e => { if (e.name === oldN) e.name = newN; });
@@ -1928,9 +1932,9 @@ input[type=date]{width:100%;display:block}
   let pickFor = null;
   function allExercises(){
     const m = new Map();
-    TEMPLATES.Push.forEach(n => m.set(n, 'Push'));
-    TEMPLATES.Pull.forEach(n => m.set(n, 'Pull'));
-    TEMPLATES.Leg.forEach(n => m.set(n, 'Leg'));
+    TEMPLATES.Push.forEach(n => m.set(tplName(n), 'Push'));
+    TEMPLATES.Pull.forEach(n => m.set(tplName(n), 'Pull'));
+    TEMPLATES.Leg.forEach(n => m.set(tplName(n), 'Leg'));
     (data.custom || []).forEach(c => {
       const n = typeof c === 'string' ? c : c.name, cat = typeof c === 'string' ? 'Eigene' : (c.cat || 'Eigene');
       if (n && !m.has(n)) m.set(n, cat);
@@ -2740,7 +2744,7 @@ input[type=date]{width:100%;display:block}
       const keys = await mediaDo('readonly', st => st.getAllKeys());
       for (const k of keys || []){ const blob = await mediaDo('readonly', st => st.get(k)); const d = blob && await toData(blob); if (d) images[k] = d; }
     } catch(_){}
-    const json = JSON.stringify({ app:'trainingslog', version:2, exported:new Date().toISOString(), sessions:data.sessions, custom:data.custom, days:data.days, notes:data.notes, imgFit:data.imgFit, images }, null, 1);
+    const json = JSON.stringify({ app:'trainingslog', version:2, exported:new Date().toISOString(), sessions:data.sessions, custom:data.custom, days:data.days, notes:data.notes, imgFit:data.imgFit, renames:data.renames, images }, null, 1);
     const name = 'trainingslog-' + today() + '.json';
     try {
       const file = new File([json], name, { type:'application/json' });
@@ -2765,6 +2769,7 @@ input[type=date]{width:100%;display:block}
       if (Array.isArray(obj.custom)){ data.custom = data.custom || []; obj.custom.forEach(c => { if (c && c.name && !data.custom.some(x => x.name === c.name)) data.custom.push(c); }); }
       if (Array.isArray(obj.days) && !data.days) data.days = obj.days;
       if (obj.notes) data.notes = Object.assign({}, obj.notes, data.notes || {});
+      if (obj.renames) data.renames = Object.assign({}, obj.renames, data.renames || {});
       if (obj.imgFit) data.imgFit = Object.assign({}, data.imgFit || {}, obj.imgFit);
       if (obj.images) Object.entries(obj.images).forEach(([k, d]) => { m++;
         fetch(d).then(r => r.blob()).then(b => setImg(k, b)).then(() => renderEditor()).catch(() => {}); });
