@@ -830,7 +830,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 56</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 57</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -966,7 +966,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 56;
+  const MY_VERSION = 57;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1344,7 +1344,8 @@ input[type=date]{width:100%;display:block}
   });
   $('#backfill').addEventListener('click', () => {
     const inp = $('#s-date');
-    if (data.draft.date >= today()){ const y = new Date(Date.now() - 864e5); data.draft.date = new Date(y.getTime() - y.getTimezoneOffset()*60000).toISOString().slice(0,10); saveDraft(); renderMeta(); }
+    if (data.draft.date >= today()){ const y = new Date(Date.now() - 864e5); data.draft.date = new Date(y.getTime() - y.getTimezoneOffset()*60000).toISOString().slice(0,10); data.draft.manualDay = today(); saveDraft(); renderMeta(); }
+    else data.draft.manualDay = today();
     try { if (inp.showPicker) { inp.showPicker(); return; } } catch(_){}
     inp.focus(); inp.click();
   });
@@ -1597,7 +1598,19 @@ input[type=date]{width:100%;display:block}
   $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') closePicker(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet').hidden) closePicker(); });
 
-  $('#s-date').addEventListener('input', e => { data.draft.date = e.target.value; saveDraft(); renderMeta(); });
+  $('#s-date').addEventListener('input', e => { data.draft.date = e.target.value; data.draft.manualDay = today(); saveDraft(); renderMeta(); });
+  // Datum steht immer auf heute – außer man hat heute selbst ein anderes gewählt (Nachtragen) oder bearbeitet ein Training
+  function syncDate(){
+    const d = data.draft, t = today();
+    if (!d || d.editId != null) return false;
+    if (d.manualDay && d.manualDay !== t) delete d.manualDay;
+    if (!d.manualDay && d.date !== t){ d.date = t; saveDraft(); return true; }
+    return false;
+  }
+  const resync = () => { if (syncDate()) renderMeta(); };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) resync(); });
+  addEventListener('focus', resync); addEventListener('pageshow', resync);
+  setInterval(resync, 60000);
 
 
   // ---- save session ----
@@ -2283,7 +2296,7 @@ input[type=date]{width:100%;display:block}
   $('#theme').addEventListener('click', () => { theme = theme === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('tl-theme', theme); } catch(_){} applyTheme(theme); });
 
   // ---- init ----
-  renderMeta(); renderEditor(); updateTimer();
+  syncDate(); renderMeta(); renderEditor(); updateTimer();
   if (!storageOk) say('Hinweis: Der Browser erlaubt hier kein Speichern. Daten gehen beim Schließen verloren.', true);
   else say('Funktioniert auch offline. Daten bleiben auf diesem Gerät.');
   showTab('new');
