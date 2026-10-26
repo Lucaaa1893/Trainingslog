@@ -943,7 +943,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span hidden id="ver-txt">Version 84</span><span id="ver-label">Version 8.2</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span hidden id="ver-txt">Version 85</span><span id="ver-label">Version 8.3</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1092,7 +1092,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 84;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 85;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1352,7 +1352,7 @@ input[type=date]{width:100%;display:block}
     const view = $('#view-' + which); if (view && !reduce){ view.classList.remove('pop-in'); void view.offsetWidth; view.classList.add('pop-in'); }
     updateLevelChip();
     if (which === 'hist') renderHistory();
-    if (which === 'prog'){ renderHealth(); renderProgress(); }
+    if (which === 'prog'){ calMonth = null; calSel = null; renderHealth(); renderProgress(); }   // Kalender beim Öffnen immer auf heute
     if (which === 'ex') renderExList();
     if (typeof sheen === 'function' && !reduce) requestAnimationFrame(sheen);
   }
