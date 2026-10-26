@@ -830,7 +830,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 57</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 58</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -966,7 +966,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 57;
+  const MY_VERSION = 58;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -2296,6 +2296,7 @@ input[type=date]{width:100%;display:block}
   $('#theme').addEventListener('click', () => { theme = theme === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('tl-theme', theme); } catch(_){} applyTheme(theme); });
 
   // ---- init ----
+  if (data.draft) delete data.draft.manualDay;   // beim Start immer heute
   syncDate(); renderMeta(); renderEditor(); updateTimer();
   if (!storageOk) say('Hinweis: Der Browser erlaubt hier kein Speichern. Daten gehen beim Schließen verloren.', true);
   else say('Funktioniert auch offline. Daten bleiben auf diesem Gerät.');
