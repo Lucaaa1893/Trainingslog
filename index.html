@@ -921,7 +921,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span hidden id="ver-txt">Version 77</span><span id="ver-label">Version 7.1</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span hidden id="ver-txt">Version 78</span><span id="ver-label">Version 7.2</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -972,6 +972,16 @@ input[type=date]{width:100%;display:block}
       'Rückenstrecker',
       'Bizeps an der Bizepsmaschine',
       'Bizeps am Kabelturm unilateral'
+    ],
+    Leg: [
+      'Kniebeuge mit Langhantel',
+      'Beinpresse',
+      'Beinbeuger',
+      'Beinstrecker',
+      'Wadenheben an der Beinpresse',
+      'Wadenheben sitzend',
+      'Abduktoren',
+      'Adduktoren'
     ]
   };
   function lastNote(name){
@@ -984,8 +994,8 @@ input[type=date]{width:100%;display:block}
   // Trainingstage: Push und Pull fest, eigene Tage (z. B. Beine) kommen dazu
   const DAY_COLORS = ['#22B455','#F08A00','#E8467C','#1FA8D9','#D4A80A','#6B7280'];
   function days(){
-    const own = (data.days || []).map((d, k) => ({ name: d.name, color: d.color || DAY_COLORS[k % DAY_COLORS.length] }));
-    return [{ name:'Push', color:'#2F7BF5' }, { name:'Pull', color:'#9358F2' }, ...own];
+    const own = (data.days || []).filter(d => !['Push','Pull','Leg'].includes(d.name)).map((d, k) => ({ name: d.name, color: d.color || DAY_COLORS[(k + 1) % DAY_COLORS.length] }));
+    return [{ name:'Push', color:'#2F7BF5' }, { name:'Pull', color:'#9358F2' }, { name:'Leg', color:'#22B455' }, ...own];
   }
   const dayColor = t => (days().find(d => d.name === t) || { color:'#9AA3B2' }).color;
   // Übungsliste eines Tages: Push/Pull immer in der ursprünglichen Reihenfolge,
@@ -1058,7 +1068,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 77;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 78;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1450,11 +1460,31 @@ input[type=date]{width:100%;display:block}
       curl_cable: { A:{H:[57,14],N:[56,25],P:[56,56],K:[57,75],F:[56,94],E:[58,46],W:[64,68]}, B:{W:[68,30]},
         eq:[{seg:[[98,30],[98,94]],w:3},{cable:[[96,90],'W']},{vbar:'W'}], bones:BONES_SIDE },
       squat: { A:{H:[56,10],N:[55,22],P:[54,54],K:[58,74],F:[54,94],E:[46,30],W:[53,20]}, B:{H:[66,32],N:[60,42],P:[38,66],K:[62,70],E:[52,50],W:[58,40]},
-        eq:[{bar:'W',w:34}], bones:BONES_SIDE }
+        eq:[{bar:'W',w:34}], bones:BONES_SIDE },
+      legpress: { A:{H:[18,50],N:[26,56],P:[44,78],K:[52,50],F:[70,54],E:[38,68],W:[46,74]}, B:{K:[62,57],F:[82,38]},
+        eq:[{seg:[[12,46],[44,84]],w:6},{seg:[[44,84],[44,94]]},{seg:[[56,86],[106,36]],w:2},{perp:'F',d:[7,7]}], bones:BONES_SIDE },
+      legcurl: { A:{H:[16,50],N:[26,56],P:[58,58],K:[82,58],F:[104,58],E:[24,68],W:[16,70]}, B:{F:[92,37]},
+        eq:[{rect:[18,62,70,6]},{seg:[[30,68],[30,94]]},{seg:[[76,68],[76,94]]},{plate:'F',r:5,o:[0,-4]}], bones:BONES_SIDE },
+      legext: { A:{H:[38,20],N:[38,31],P:[40,62],K:[62,62],F:[62,88],E:[44,46],W:[50,62]}, B:{F:[85,60]},
+        eq:[{rect:[30,26,6,40]},{rect:[30,64,34,6]},{seg:[[42,70],[42,94]]},{plate:'F',r:5,o:[2,2]}], bones:BONES_SIDE },
+      calf_press: { A:{H:[18,50],N:[26,56],P:[44,78],K:[61,58],F:[78,40],T:[86,40],E:[38,68],W:[46,74]}, B:{K:[63,56],F:[82,36],T:[90,40]},
+        extra:[['F','T']], eq:[{seg:[[12,46],[44,84]],w:6},{seg:[[44,84],[44,94]]},{seg:[[56,86],[106,36]],w:2},{perp:'T',d:[6,6]}], bones:BONES_SIDE },
+      calf_seated: { A:{H:[38,20],N:[38,31],P:[40,62],K:[64,62],F:[64,90],T:[76,92],E:[52,54],W:[60,58]}, B:{K:[64,54],F:[66,82]},
+        extra:[['F','T']], eq:[{rect:[30,64,30,6]},{seg:[[40,70],[40,94]]},{pad2:'K'},{seg:[[70,94],[82,90]],w:4}], bones:BONES_SIDE },
+      abductor: { A:{H:[60,18],N:[60,30],S1:[50,32],S2:[70,32],P:[60,62],E1:[46,46],W1:[42,60],E2:[74,46],W2:[78,60],K1:[52,70],F1:[52,93],K2:[68,70],F2:[68,93]},
+        B:{K1:[38,70],F1:[38,93],K2:[82,70],F2:[82,93]}, eq:[{rect:[46,60,28,7]},{padv:'K1',o:[-5,0]},{padv:'K2',o:[5,0]}], bones:BONES_FRONT },
+      adductor: { A:{H:[60,18],N:[60,30],S1:[50,32],S2:[70,32],P:[60,62],E1:[46,46],W1:[42,60],E2:[74,46],W2:[78,60],K1:[38,70],F1:[38,93],K2:[82,70],F2:[82,93]},
+        B:{K1:[54,70],F1:[54,93],K2:[66,70],F2:[66,93]}, eq:[{rect:[46,60,28,7]},{padv:'K1',o:[5,0]},{padv:'K2',o:[-5,0]}], bones:BONES_FRONT }
     };
   })();
   function exAnimKey(name){
     const n = (name || '').toLowerCase();
+    if (/wade/.test(n)) return /sitz/.test(n) ? 'calf_seated' : 'calf_press';
+    if (/abduk/.test(n)) return 'abductor';
+    if (/adduk/.test(n)) return 'adductor';
+    if (/beinbeuger|leg ?curl/.test(n)) return 'legcurl';
+    if (/beinstrecker|leg ?ext/.test(n)) return 'legext';
+    if (/beinpresse|leg ?press/.test(n)) return 'legpress';
     if (/schrägbank|schraegbank|incline/.test(n)) return 'incline';
     if (/reverse|hintere schulter|face ?pull/.test(n)) return 'revfly';
     if (/butterfl|\bfly|flys/.test(n)) return 'fly';
@@ -1499,7 +1529,10 @@ input[type=date]{width:100%;display:block}
       if (e.vbar) out += line(P(e.vbar, [0, -5]), P(e.vbar, [0, 5]), 'wt', 4.5);
       if (e.bar) out += line(P(e.bar, [-e.w / 2, 0]), P(e.bar, [e.w / 2, 0]), 'wt', 4);
       if (e.pad) out += line(P(e.pad, [0, -6]), P(e.pad, [0, 6]), 'wt', 7);
-      if (e.plate) out += circ(P(e.plate, [6, 4]), 9, 'pl');
+      if (e.pad2) out += line(P(e.pad2, [-6, -6]), P(e.pad2, [6, -6]), 'wt', 7);
+      if (e.padv) out += line(P(e.padv, [e.o[0], -6]), P(e.padv, [e.o[0], 6]), 'wt', 6);
+      if (e.perp) out += line(P(e.perp, [-e.d[0], -e.d[1]]), P(e.perp, [e.d[0], e.d[1]]), 'wt', 5);
+      if (e.plate) out += circ(P(e.plate, e.o || [6, 4]), e.r || 9, 'pl');
     });
     return `<svg class="exanim" viewBox="0 -8 120 106" aria-hidden="true"><line class="gnd" x1="4" y1="96" x2="116" y2="96"/>${out}</svg>`;
   }
@@ -1862,6 +1895,7 @@ input[type=date]{width:100%;display:block}
     const m = new Map();
     TEMPLATES.Push.forEach(n => m.set(n, 'Push'));
     TEMPLATES.Pull.forEach(n => m.set(n, 'Pull'));
+    TEMPLATES.Leg.forEach(n => m.set(n, 'Leg'));
     (data.custom || []).forEach(c => {
       const n = typeof c === 'string' ? c : c.name, cat = typeof c === 'string' ? 'Eigene' : (c.cat || 'Eigene');
       if (n && !m.has(n)) m.set(n, cat);
