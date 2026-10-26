@@ -796,7 +796,6 @@ input[type=date]{width:100%;display:block}
     </div>
     <p class="past-hint" id="past-hint" hidden></p>
     <div class="meta-actions">
-      <button class="ghost alt" id="backfill" type="button">Nachtragen</button>
       <button class="ghost alt" id="last-all" type="button" hidden>Alle letzten</button>
       <button class="ghost alt clr" id="clear-all" type="button">Alle leeren</button>
     </div>
@@ -844,7 +843,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 61</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 62</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -980,7 +979,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 61;
+  const MY_VERSION = 62;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1352,7 +1351,6 @@ input[type=date]{width:100%;display:block}
     $('#edit-bar').hidden = !editing;
     if (editing) $('#edit-txt').textContent = `Bearbeitest: ${d.type} vom ${fmtDate(d.date)}`;
     $('#save').textContent = editing ? 'Änderungen speichern' : 'Session speichern';
-    $('#backfill').hidden = editing;
     const past = !editing && d.date && d.date < today();
     $('#past-hint').hidden = !past;
     if (past) $('#past-hint').textContent = `📅 Wird als Training vom ${fmtDate(d.date)} nachgetragen.`;
@@ -1363,13 +1361,6 @@ input[type=date]{width:100%;display:block}
     const v = Number(b.dataset.mood);
     data.draft.mood = data.draft.mood === v ? undefined : v;
     saveDraft(); renderMeta();
-  });
-  $('#backfill').addEventListener('click', () => {
-    const inp = $('#s-date');
-    if (data.draft.date >= today()){ const y = new Date(Date.now() - 864e5); data.draft.date = new Date(y.getTime() - y.getTimezoneOffset()*60000).toISOString().slice(0,10); data.draft.manualDay = today(); saveDraft(); renderMeta(); }
-    else data.draft.manualDay = today();
-    try { if (inp.showPicker) { inp.showPicker(); return; } } catch(_){}
-    inp.focus(); inp.click();
   });
   // ---- gespeichertes Training bearbeiten ----
   function editSession(ses){
@@ -1753,10 +1744,9 @@ input[type=date]{width:100%;display:block}
       </details>
       </div>`;
     }).join('');
-    $('#history').insertAdjacentHTML('afterbegin', '<button class="ghost alt" type="button" id="hist-add" style="margin:0 0 12px">📅 Vergessenes Training nachtragen</button><p class="swipe-hint">Antippen zum Öffnen und Bearbeiten · nach links wischen zum Löschen</p>');
+    $('#history').insertAdjacentHTML('afterbegin', '<p class="swipe-hint">Antippen zum Öffnen und Bearbeiten · nach links wischen zum Löschen</p>');
   }
   $('#history').addEventListener('click', e => {
-    if (e.target.closest('#hist-add')){ if (data.draft.editId != null) endEdit(); showTab('new'); scrollTo(0, 0); $('#backfill').click(); return; }
     const sh = e.target.closest('[data-share]');
     if (sh){ const ses = data.sessions.find(x => String(x.id) === sh.dataset.share); if (ses) showCard(ses, []); return; }
     const ed = e.target.closest('[data-edit]');
