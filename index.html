@@ -765,6 +765,10 @@ input[type=date]{width:100%;display:block}
 .exa.big.fit .exaimg{object-fit:contain;will-change:transform;position:absolute;inset:0}
 .exa.big.fit.aligning{touch-action:none;cursor:grab;border:2px solid #4B8EFF;box-shadow:0 0 0 4px rgba(75,142,255,.3)}
 .ex-name .nm[data-anim]{cursor:pointer}
+.exa.big .guide{position:absolute;background:#FFD23F;opacity:0;transition:opacity .15s;pointer-events:none;z-index:2;box-shadow:0 0 6px rgba(255,210,63,.8)}
+.exa.big .gx{left:50%;top:0;bottom:0;width:2px;margin-left:-1px}
+.exa.big .gy{top:50%;left:0;right:0;height:2px;margin-top:-1px}
+.exa.big.snap-x .gx,.exa.big.snap-y .gy{opacity:.95}
 .size-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:12px;color:#fff;font-weight:600;font-size:14px}
 .size-row .sz{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.16);color:#fff;font:600 24px/1 var(--f-body);display:grid;place-items:center;padding:0}
 .align-hint{margin:12px 0 0;font-size:13px;font-weight:600;color:#fff}
@@ -885,7 +889,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span hidden id="ver-txt">Version 72</span><span id="ver-label">Version 6.5</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span hidden id="ver-txt">Version 73</span><span id="ver-label">Version 6.6</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1021,7 +1025,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 72;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 73;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1661,9 +1665,14 @@ input[type=date]{width:100%;display:block}
           const move = (cx, cy, dist) => {
             if (!drag) return;
             const s2 = drag.d && dist ? clS(drag.f.s * dist / drag.d) : drag.f.s;
-            save({ dx: clD(drag.f.dx + (cx - drag.x) / drag.w * 100), dy: clD(drag.f.dy + (cy - drag.y) / drag.h * 100), s: s2 });
+            // magnetisch zur Mitte: nahe 0 rastet das Bild mittig ein, Hilfslinien zeigen es an
+            const snap = v => Math.abs(v) < 4 ? 0 : v;
+            const dx = snap(clD(drag.f.dx + (cx - drag.x) / drag.w * 100)), dy = snap(clD(drag.f.dy + (cy - drag.y) / drag.h * 100));
+            frame.classList.toggle('snap-x', dx === 0); frame.classList.toggle('snap-y', dy === 0);
+            save({ dx, dy, s: s2 });
           };
-          const end = () => { drag = null; };
+          const end = () => { drag = null; frame.classList.remove('snap-x', 'snap-y'); };
+          frame.insertAdjacentHTML('beforeend', '<i class="guide gx"></i><i class="guide gy"></i>');
           const tp = ev => { const a = ev.touches[0], b = ev.touches[1];
             return b ? [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2, Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)] : [a.clientX, a.clientY, 0]; };
           frame.addEventListener('touchstart', ev => { if (start(...tp(ev))) ev.preventDefault(); }, { passive: false });
