@@ -885,7 +885,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 70</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span hidden id="ver-txt">Version 71</span><span id="ver-label">Version 1.0</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1021,7 +1021,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 70;
+  const MY_VERSION = 71;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1040,7 +1040,7 @@ input[type=date]{width:100%;display:block}
         // automatisch aktualisieren (einmal pro Version), Trainingsdaten bleiben erhalten
         let tried = ''; try { tried = sessionStorage.getItem('upd-tried') || ''; } catch(_){}
         if (tried !== String(v)){ try { sessionStorage.setItem('upd-tried', String(v)); } catch(_){} hardUpdate(); return; }
-        $('#upd').hidden = false; if (manual) say(`Version ${v} ist verfügbar.`);
+        $('#upd').hidden = false; if (manual) say('Eine neue Version ist verfügbar.');
       }
       else if (manual) say('Du hast die neueste Version.');
     } catch(_){ if (manual) say('Update-Prüfung hat nicht geklappt.', true); }
