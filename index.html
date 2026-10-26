@@ -75,8 +75,8 @@ header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
 .pill.off::before{background:var(--drop);box-shadow:0 0 0 3px var(--drop-soft)}
 
 /* Segment-Control mit gleitender Glaslinse */
-.tabs{position:relative;overflow:hidden;display:grid;grid-template-columns:repeat(3,1fr);margin-bottom:18px;border-radius:999px;padding:4px}
-.lens{position:absolute;top:4px;bottom:4px;left:4px;width:calc((100% - 8px) / 3);border-radius:999px;pointer-events:none;z-index:0;
+.tabs{position:relative;overflow:hidden;display:grid;grid-template-columns:repeat(4,1fr);margin-bottom:18px;border-radius:999px;padding:4px}
+.lens{position:absolute;top:4px;bottom:4px;left:4px;width:calc((100% - 8px) / 4);border-radius:999px;pointer-events:none;z-index:0;
   background:linear-gradient(170deg,rgba(255,255,255,.95),rgba(255,255,255,.55));
   box-shadow:inset 0 1px 1px #fff, inset 0 -2px 4px rgba(20,30,50,.08), 0 6px 16px -6px rgba(25,40,70,.35), 0 0 0 1px rgba(255,255,255,.9);
   transition:transform .5s cubic-bezier(.3,1.3,.5,1)}
@@ -514,7 +514,7 @@ input[type=date]{width:100%;display:block}
 /* Lupe: vergrößerte, blaue Kopie der Tab-Texte, auf die Form der Blase zugeschnitten */
 .lens-mag{position:absolute;left:0;top:0;width:0;height:0;z-index:3;pointer-events:none;overflow:hidden;opacity:0;transition:opacity .18s ease}
 .lens-mag.on{opacity:1}
-.lm-row{position:absolute;display:grid;grid-template-columns:repeat(3,1fr);align-items:center;text-align:center;font:600 14px/1 var(--f-body);color:var(--accent-text);will-change:transform}
+.lm-row{position:absolute;display:grid;grid-template-columns:repeat(4,1fr);align-items:center;text-align:center;font:600 14px/1 var(--f-body);color:var(--accent-text);will-change:transform}
 .lens.grab,.lens.travel{z-index:2;-webkit-backdrop-filter:blur(6px) saturate(170%) brightness(1.08);backdrop-filter:blur(6px) saturate(170%) brightness(1.08);
   background:radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,.98), rgba(244,246,250,.93) 55%, rgba(250,251,253,.96))}
 .tabs.grabbing .tab.hover,.tab.hover{scale:1}
@@ -771,6 +771,27 @@ input[type=date]{width:100%;display:block}
 .exa.big.snap-x .gx,.exa.big.snap-y .gy{opacity:.95}
 .dlg-bg{overscroll-behavior:contain;touch-action:none}
 .dlg-bg .dlg{touch-action:pan-y;overscroll-behavior:contain;max-height:92vh;overflow-y:auto}
+.tab{font-size:13px;padding-left:2px;padding-right:2px;letter-spacing:-.01em}
+.tabs.grabbing .tab.hover,.tab.hover{scale:1.14!important}
+.exl-head{display:grid;gap:10px}
+.exl-head .btn{margin:0}
+.exl-cat{font:700 22px/1.2 var(--f-display);margin:18px 6px 8px;color:var(--fg)}
+.exl-group{padding:10px 12px;margin-bottom:10px}
+.exl-group .p-sub{margin:4px 4px 6px}
+.exl-row{display:flex;align-items:center;gap:12px;width:100%;padding:8px 4px;border:0;border-top:1px solid var(--line2);background:transparent;text-align:left;color:var(--fg);cursor:pointer;font:inherit}
+.exl-group .p-sub + .exl-row{border-top:0}
+.exl-thumb{flex:0 0 auto;width:58px;height:50px;border-radius:12px;overflow:hidden;display:grid;place-items:center;background:radial-gradient(120% 120% at 30% 0%, rgba(255,255,255,.95), rgba(255,255,255,.5));border:1px solid rgba(255,255,255,.8);position:relative}
+.exl-thumb .exanim{width:100%;height:100%}
+.exl-thumb .exaimg{width:100%;height:100%;object-fit:contain;background:#fff}
+.exl-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.exl-txt b{font-size:15px;font-weight:600;line-height:1.25}
+.exl-txt small{font-size:12px;color:var(--muted)}
+.exl-go{font-size:22px;color:var(--muted);flex:none}
+.nx-seg{grid-template-columns:repeat(auto-fit,minmax(70px,1fr))}
+.nx-err{margin:10px 0 0;color:#FF8A80;font-size:13px;font-weight:600}
+.anim-dlg .ex-del{margin-top:0;margin-bottom:10px}
+:root[data-theme="dark"] .exl-thumb{background:radial-gradient(120% 120% at 30% 0%, rgba(255,255,255,.12), rgba(255,255,255,.04));border-color:rgba(255,255,255,.1)}
+:root[data-theme="dark"] .exl-cat{color:#fff}
 .size-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:12px;color:#fff;font-weight:600;font-size:14px}
 .size-row .sz{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.16);color:#fff;font:600 24px/1 var(--f-body);display:grid;place-items:center;padding:0}
 .align-hint{margin:12px 0 0;font-size:13px;font-weight:600;color:#fff}
@@ -822,10 +843,11 @@ input[type=date]{width:100%;display:block}
 
 <div class="tabs" role="tablist">
   <span class="lens" id="lens" aria-hidden="true"></span>
-  <span class="lens-mag" id="lensMag" aria-hidden="true"><span class="lm-row"><span>Eintragen</span><span>Verlauf</span><span>Fortschritt</span></span></span>
+  <span class="lens-mag" id="lensMag" aria-hidden="true"><span class="lm-row"><span>Eintragen</span><span>Verlauf</span><span>Fortschritt</span><span>Übungen</span></span></span>
   <button class="tab" role="tab" id="tab-new" aria-controls="view-new" aria-selected="true">Eintragen</button>
   <button class="tab" role="tab" id="tab-hist" aria-controls="view-hist" aria-selected="false">Verlauf</button>
   <button class="tab" role="tab" id="tab-prog" aria-controls="view-prog" aria-selected="false">Fortschritt</button>
+  <button class="tab" role="tab" id="tab-ex" aria-controls="view-ex" aria-selected="false">Übungen</button>
 </div>
 
 <!-- NEW SESSION -->
@@ -887,11 +909,19 @@ input[type=date]{width:100%;display:block}
 </section>
 
 <!-- PROGRESS -->
+<section id="view-ex" role="tabpanel" aria-labelledby="tab-ex" hidden>
+  <div class="card exl-head">
+    <input id="ex-search" type="search" placeholder="Übung suchen" aria-label="Übung suchen" autocomplete="off">
+    <button class="btn" id="ex-new" type="button">+ Neue Übung</button>
+  </div>
+  <div id="ex-list"></div>
+</section>
+
 <section id="view-prog" role="tabpanel" aria-labelledby="tab-prog" hidden>
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span hidden id="ver-txt">Version 75</span><span id="ver-label">Version 6.8</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span hidden id="ver-txt">Version 76</span><span id="ver-label">Version 7.0</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1027,7 +1057,8 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 75;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const TAB_IDS = ['new','hist','prog','ex'];
+  const MY_VERSION = 76;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1104,7 +1135,7 @@ input[type=date]{width:100%;display:block}
     const tr = tb.getBoundingClientRect(), lr = L.getBoundingClientRect();
     const x = lr.left - tr.left - tb.clientLeft, y = lr.top - tr.top - tb.clientTop;
     Object.assign(magWrap.style, { left: x + 'px', top: y + 'px', width: lr.width + 'px', height: lr.height + 'px', borderRadius: (lr.height / 2) + 'px' });
-    const t0 = $('#tab-new'), t2 = $('#tab-prog');
+    const t0 = $('#tab-new'), t2 = $('#tab-ex');
     const rl = t0.offsetLeft - x, rt = t0.offsetTop - y;
     Object.assign(R.style, { left: rl + 'px', top: rt + 'px', width: (t2.offsetLeft + t2.offsetWidth - t0.offsetLeft) + 'px', height: t0.offsetHeight + 'px' });
     const sy = parseFloat((L.style.scale || '').split(' ')[1]) || 1.45;
@@ -1121,13 +1152,13 @@ input[type=date]{width:100%;display:block}
   }
   function kickMag(){ if (reduce) return; magUntil = performance.now() + 450; if (!magRaf) magRaf = requestAnimationFrame(magLoop); }
   function moveLens(which){
-    const idx = ['new','hist','prog'].indexOf(which), lens = $('#lens');
+    const idx = TAB_IDS.indexOf(which), lens = $('#lens');
     if (!lens || idx < 0) return;
     const prev = lens.dataset.idx;
     lens.style.translate = `${idx * 100}% 0`;
     if (false && prev != null && +prev !== idx && !reduce){   // Glasblase nur noch beim Wischen
       // wie iOS: Pille wird beim Wechseln zur großen Glasblase, gleitet rüber und schrumpft wieder
-      lens.style.transformOrigin = `${idx * 50}% 50%`;
+      lens.style.transformOrigin = `${idx * 100 / (TAB_IDS.length - 1)}% 50%`;
       lens.classList.add('travel'); kickMag();
       clearTimeout(lens._t); lens._t = setTimeout(() => lens.classList.remove('travel'), 420);
       const from = +prev, to = idx, step = to > from ? 1 : -1;
@@ -1279,7 +1310,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- tabs ----
   function showTab(which){
-    ['new','hist','prog'].forEach(t => {
+    TAB_IDS.forEach(t => {
       $('#tab-' + t).setAttribute('aria-selected', t === which);
       $('#view-' + t).hidden = t !== which;
     });
@@ -1288,13 +1319,14 @@ input[type=date]{width:100%;display:block}
     updateLevelChip();
     if (which === 'hist') renderHistory();
     if (which === 'prog') renderProgress();
+    if (which === 'ex') renderExList();
     if (typeof sheen === 'function' && !reduce) requestAnimationFrame(sheen);
   }
   // Tab-Leiste wie iOS: Linse beim Drücken vergrößern und mit dem Finger über die Tabs ziehen
-  const TABS = ['new','hist','prog'];
+  const TABS = TAB_IDS;
   let tabDrag = null, tabHandled = false;
   const tabBar = document.querySelector('.tabs');
-  function lensMetrics(){ const r = tabBar.getBoundingClientRect(), w = (r.width - 8) / 3; return { r, w }; }
+  function lensMetrics(){ const r = tabBar.getBoundingClientRect(), w = (r.width - 8) / TABS.length; return { r, w }; }
   function hoverTab(idx){ TABS.forEach((t, k) => $('#tab-' + t).classList.toggle('hover', k === idx)); }
   tabBar.addEventListener('pointerdown', e => {
     if (e.button > 0) return;
@@ -1310,14 +1342,14 @@ input[type=date]{width:100%;display:block}
     const lens = $('#lens');
     if (!tabDrag.moved){
       tabDrag.moved = true;
-      lens.style.transformOrigin = `${(+lens.dataset.idx || 0) * 50}% 50%`;
+      lens.style.transformOrigin = `${(+lens.dataset.idx || 0) * 100 / (TABS.length - 1)}% 50%`;
       lens.classList.add('grab');
       tabBar.classList.add('grabbing');
       kickMag();
     }
     lens.classList.add('drag');
     let x = e.clientX - tabDrag.left - 4 - tabDrag.w / 2;
-    const maxX = tabDrag.w * 2;
+    const maxX = tabDrag.w * (TABS.length - 1);
     const over = x < 0 ? -x : x > maxX ? x - maxX : 0;   // wie weit über den Rand gezogen
     x = Math.max(0, Math.min(maxX, x));   // bleibt immer innerhalb der Leiste
     // am Rand: Blase zoomt federnd größer statt weiterzurutschen
@@ -1327,7 +1359,7 @@ input[type=date]{width:100%;display:block}
     lens.style.transformOrigin = `${(x / maxX) * 100}% 50%`;   // wächst am Rand nach innen
     lens.style.translate = `${x}px 0`;
     kickMag();
-    hoverTab(Math.max(0, Math.min(2, Math.round(x / tabDrag.w))));
+    hoverTab(Math.max(0, Math.min(TABS.length - 1, Math.round(x / tabDrag.w))));
   });
   function endTabDrag(e){
     if (!tabDrag) return;
@@ -1336,8 +1368,8 @@ input[type=date]{width:100%;display:block}
     lens.style.scale = '';
     lens.classList.remove('drag', 'grab'); kickMag(); tabBar.classList.remove('grabbing'); hoverTab(-1);
     let idx;
-    if (d.moved){ const m = /(-?[\d.]+)px/.exec(lens.style.translate); idx = Math.max(0, Math.min(2, Math.round((m ? +m[1] : 0) / d.w))); }
-    else idx = Math.max(0, Math.min(2, Math.floor((e.clientX - d.left - 4) / d.w)));
+    if (d.moved){ const m = /(-?[\d.]+)px/.exec(lens.style.translate); idx = Math.max(0, Math.min(TABS.length - 1, Math.round((m ? +m[1] : 0) / d.w))); }
+    else idx = Math.max(0, Math.min(TABS.length - 1, Math.floor((e.clientX - d.left - 4) / d.w)));
     tabHandled = true; setTimeout(() => { tabHandled = false; }, 60);
     showTab(TABS[idx]);
     if (d.moved) moveLens(TABS[idx]);
@@ -1511,6 +1543,114 @@ input[type=date]{width:100%;display:block}
     };
     new MutationObserver(sync).observe(document.body, { childList: true });
   })();
+  function openExDialog(n){
+      const bg = document.createElement('div'); bg.className = 'dlg-bg';
+      let aligning = false;
+      const draw = () => { bg.innerHTML = `<div class="dlg anim-dlg" role="dialog" aria-modal="true" aria-label="${esc(n)}"><div class="exa big">${exTile(n, true)}</div><h2>${esc(n)}</h2>
+        <div class="anim-acts"><label class="ghost alt anim-pick">${exImg.has(n) ? 'Anderes Bild/GIF' : 'Eigenes Bild/GIF wählen'}<input type="file" accept="image/*" hidden></label>${exImg.has(n) ? '<button type="button" class="ghost alt clr anim-rm">Entfernen</button>' : ''}</div>
+        ${exImg.has(n) ? (aligning ? '<div class="size-row"><button type="button" class="sz" data-sz="-1" aria-label="Kleiner">−</button><span>Größe</span><button type="button" class="sz" data-sz="1" aria-label="Größer">+</button></div><p class="align-hint">Mit einem Finger verschieben, mit zwei Fingern größer/kleiner ziehen, dann „Fertig“.</p><button type="button" class="ghost align-done">Fertig</button>' : '') : ''}
+        <p class="dlg-sub anim-note">Wird nur auf diesem Gerät gespeichert.</p>
+        ${isCustomEx(n) ? '<button type="button" class="ghost alt clr ex-del">Übung löschen</button>' : ''}
+        <div class="dlg-btns"><button type="button" class="dlg-ok">Schließen</button></div></div>`;
+        bg.querySelector('input[type=file]').addEventListener('change', async ev => { const f = ev.target.files[0]; if (!f) return; try { await setImg(n, f); data.imgFit = data.imgFit || {}; delete data.imgFit[n]; persist(); aligning = true; } catch (_){ say('Bild konnte nicht gespeichert werden.', true); } draw(); });
+        const ad = bg.querySelector('.align-done'); if (ad) ad.addEventListener('click', () => { aligning = false; draw(); });
+        const xd = bg.querySelector('.ex-del'); if (xd) xd.addEventListener('click', () => {
+          data.custom = (data.custom || []).filter(c => (typeof c === 'string' ? c : c.name) !== n); persist(); bg.remove(); refreshEx(); });
+        const rm = bg.querySelector('.anim-rm'); if (rm) rm.addEventListener('click', async () => { try { await setImg(n, null); } catch (_){} if (data.imgFit) { delete data.imgFit[n]; persist(); } draw(); refreshEx(); });
+        const frame = bg.querySelector('.exa.big'), im = frame.querySelector('.exaimg');
+        if (im){
+          frame.classList.add('fit'); frame.classList.toggle('aligning', aligning);
+          // Rahmen bekommt das Seitenverhältnis des Bildes (sehr hohe Bilder max. 3:4)
+          const setAR = () => { if (im.naturalWidth && im.naturalHeight) frame.style.aspectRatio = Math.max(0.75, im.naturalWidth / im.naturalHeight).toFixed(4); };
+          if (im.complete) setAR(); else im.addEventListener('load', setAR);
+          const save = f => { data.imgFit = data.imgFit || {}; data.imgFit[n] = f; im.setAttribute('style', imgStyle(n)); persist(); };
+          // Verschieben per Touch (iPhone) und Maus; Weg = tatsächlicher Überstand des Bildes
+          let drag = null;
+          // verschieben (1 Finger) und größer/kleiner (2 Finger); Versatz in % der Rahmengröße
+          const clS = v => Math.max(0.3, Math.min(4, Math.round(v * 100) / 100));
+          const clD = v => Math.max(-150, Math.min(150, Math.round(v * 10) / 10));
+          const start = (cx, cy, dist) => {
+            if (!aligning) return false;
+            const r = frame.getBoundingClientRect();
+            drag = { x: cx, y: cy, d: dist || 0, f: imgFit(n), w: r.width, h: r.height };
+            return true;
+          };
+          const move = (cx, cy, dist) => {
+            if (!drag) return;
+            const s2 = drag.d && dist ? clS(drag.f.s * dist / drag.d) : drag.f.s;
+            // magnetisch zur Mitte: nahe 0 rastet das Bild mittig ein, Hilfslinien zeigen es an
+            const snap = v => Math.abs(v) < 4 ? 0 : v;
+            const dx = snap(clD(drag.f.dx + (cx - drag.x) / drag.w * 100)), dy = snap(clD(drag.f.dy + (cy - drag.y) / drag.h * 100));
+            frame.classList.toggle('snap-x', dx === 0); frame.classList.toggle('snap-y', dy === 0);
+            save({ dx, dy, s: s2 });
+          };
+          const end = () => { drag = null; frame.classList.remove('snap-x', 'snap-y'); };
+          frame.insertAdjacentHTML('beforeend', '<i class="guide gx"></i><i class="guide gy"></i>');
+          const tp = ev => { const a = ev.touches[0], b = ev.touches[1];
+            return b ? [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2, Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)] : [a.clientX, a.clientY, 0]; };
+          frame.addEventListener('touchstart', ev => { if (start(...tp(ev))) ev.preventDefault(); }, { passive: false });
+          frame.addEventListener('touchmove', ev => { if (!drag) return; ev.preventDefault(); const t = tp(ev);
+            if (!!t[2] !== !!drag.d) start(...t); else move(...t); }, { passive: false });
+          frame.addEventListener('touchend', ev => { if (ev.touches.length) start(...tp(ev)); else end(); }); frame.addEventListener('touchcancel', end);
+          bg.querySelectorAll('[data-sz]').forEach(b => b.addEventListener('click', () => { const f = imgFit(n); f.s = clS(f.s * (b.dataset.sz > 0 ? 1.15 : 1 / 1.15)); save(f); }));
+          frame.addEventListener('mousedown', ev => { if (start(ev.clientX, ev.clientY)) ev.preventDefault(); });
+          const mm = ev => move(ev.clientX, ev.clientY), mu = () => { end(); removeEventListener('mousemove', mm); removeEventListener('mouseup', mu); };
+          frame.addEventListener('mousedown', () => { if (drag){ addEventListener('mousemove', mm); addEventListener('mouseup', mu); } });
+        }
+      };
+      draw(); document.body.append(bg); const close = () => bg.remove();
+      bg.addEventListener('click', ev => { if (ev.target === bg || ev.target.closest('.dlg-ok')) close(); });
+
+  }
+  const isCustomEx = n => (data.custom || []).some(c => (typeof c === 'string' ? c : c.name) === n);
+  function refreshEx(){ renderEditor(); if (!$('#view-ex').hidden) renderExList(); }
+  // ---- Übungen-Seite: alle Übungen mit Bild, neue anlegen ----
+  function renderExList(){
+    const all = allExercises(), q = ($('#ex-search').value || '').trim().toLowerCase();
+    const stats = {};
+    data.sessions.forEach(s => s.exercises.forEach(e => { const st = stats[e.name] = stats[e.name] || { n: 0, best: null }; st.n++; const x = exStats(e); if (x.best != null && (st.best == null || x.best > st.best.v)) st.best = { v: x.best, set: x.bestSet }; }));
+    let html = '';
+    [...days().map(d => d.name), 'Eigene'].forEach(cat => {
+      const names = [...all].filter(([n, c]) => c === cat && (!q || n.toLowerCase().includes(q))).map(([n]) => n);
+      if (!names.length) return;
+      html += `<h3 class="exl-cat">${cat === 'Eigene' ? 'Sonstige' : esc(cat)}</h3>`;
+      const groups = {};
+      names.forEach(n => (groups[muscleOf(n)] = groups[muscleOf(n)] || []).push(n));
+      [...MUSCLE_ORDER, 'Sonstige'].forEach(m => {
+        if (!groups[m]) return;
+        html += `<div class="card exl-group"><div class="p-sub">${m}</div>` + groups[m].map(n => { const st = stats[n];
+          return `<button type="button" class="exl-row" data-exl="${esc(n)}"><span class="exl-thumb">${exTile(n)}</span><span class="exl-txt"><b>${esc(n)}</b><small>${st ? `${st.n}× trainiert${st.best && st.best.set && st.best.set.kg != null ? ` · Rekord ${kg1(st.best.set.kg)} kg × ${st.best.set.reps}` : ''}` : 'noch nicht trainiert'}${isCustomEx(n) ? ' · eigene' : ''}</small></span><span class="exl-go">›</span></button>`; }).join('') + '</div>';
+      });
+    });
+    $('#ex-list').innerHTML = html || '<div class="empty">Keine Übung gefunden.</div>';
+  }
+  $('#ex-list').addEventListener('click', e => { const r = e.target.closest('[data-exl]'); if (r) openExDialog(r.dataset.exl); });
+  $('#ex-search').addEventListener('input', renderExList);
+  $('#ex-new').addEventListener('click', () => {
+    const cats = [...days().map(d => d.name), 'Eigene'];
+    let cat = days().some(d => d.name === data.draft.type) ? data.draft.type : cats[0];
+    const bg = document.createElement('div'); bg.className = 'dlg-bg';
+    const draw = () => { bg.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="nx-t"><h2 id="nx-t">Neue Übung</h2>
+      <input id="nx-name" type="text" placeholder="z. B. Beinpresse" autocomplete="off" value="${esc(bg._v || '')}">
+      <p class="dlg-sub" style="margin:12px 0 8px">Trainingstag</p>
+      <div class="seg nx-seg">${cats.map(c => `<button type="button" data-cat="${esc(c)}" class="${c === cat ? 'def' : ''}">${c === 'Eigene' ? 'Sonstige' : esc(c)}</button>`).join('')}</div>
+      <p class="nx-err" hidden></p>
+      <div class="dlg-btns" style="margin-top:14px"><button type="button" class="dlg-cancel">Abbrechen</button><button type="button" class="dlg-ok nx-ok">Anlegen</button></div></div>`;
+      const inp = bg.querySelector('#nx-name'); inp.addEventListener('input', () => { bg._v = inp.value; });
+      inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') bg.querySelector('.nx-ok').click(); });
+      bg.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => { cat = b.dataset.cat; draw(); }));
+      bg.querySelector('.dlg-cancel').addEventListener('click', () => bg.remove());
+      bg.querySelector('.nx-ok').addEventListener('click', () => {
+        const n = (bg._v || '').trim(), err = bg.querySelector('.nx-err');
+        if (!n){ err.hidden = false; err.textContent = 'Bitte einen Namen eingeben.'; return; }
+        if ([...allExercises().keys()].some(x => x.toLowerCase() === n.toLowerCase())){ err.hidden = false; err.textContent = 'Diese Übung gibt es schon.'; return; }
+        data.custom = data.custom || []; data.custom.push({ name: n, cat }); persist(); bg.remove(); renderExList();
+        openExDialog(n);
+      });
+    };
+    draw(); bg.addEventListener('click', ev => { if (ev.target === bg) bg.remove(); });
+    document.body.append(bg); setTimeout(() => { const i = bg.querySelector('#nx-name'); if (i) i.focus(); }, 50);
+  });
   // ---- editor ----
   const MOODS = { 1: '😫', 2: '😕', 3: '😐', 4: '🙂', 5: '💪' };
   const MOOD_TXT = { 1: 'Schlecht', 2: 'Mäßig', 3: 'Mittel', 4: 'Gut', 5: 'Stark' };
@@ -1653,60 +1793,7 @@ input[type=date]{width:100%;display:block}
   });
   $('#editor').addEventListener('click', e => {
     const an = e.target.closest('[data-anim]');
-    if (an){ e.stopPropagation(); const n = an.dataset.anim; const bg = document.createElement('div'); bg.className = 'dlg-bg';
-      let aligning = false;
-      const draw = () => { bg.innerHTML = `<div class="dlg anim-dlg" role="dialog" aria-modal="true" aria-label="${esc(n)}"><div class="exa big">${exTile(n, true)}</div><h2>${esc(n)}</h2>
-        <div class="anim-acts"><label class="ghost alt anim-pick">${exImg.has(n) ? 'Anderes Bild/GIF' : 'Eigenes Bild/GIF wählen'}<input type="file" accept="image/*" hidden></label>${exImg.has(n) ? '<button type="button" class="ghost alt clr anim-rm">Entfernen</button>' : ''}</div>
-        ${exImg.has(n) ? (aligning ? '<div class="size-row"><button type="button" class="sz" data-sz="-1" aria-label="Kleiner">−</button><span>Größe</span><button type="button" class="sz" data-sz="1" aria-label="Größer">+</button></div><p class="align-hint">Mit einem Finger verschieben, mit zwei Fingern größer/kleiner ziehen, dann „Fertig“.</p><button type="button" class="ghost align-done">Fertig</button>' : '') : ''}
-        <p class="dlg-sub anim-note">Wird nur auf diesem Gerät gespeichert.</p>
-        <div class="dlg-btns"><button type="button" class="dlg-ok">Schließen</button></div></div>`;
-        bg.querySelector('input[type=file]').addEventListener('change', async ev => { const f = ev.target.files[0]; if (!f) return; try { await setImg(n, f); data.imgFit = data.imgFit || {}; delete data.imgFit[n]; persist(); aligning = true; } catch (_){ say('Bild konnte nicht gespeichert werden.', true); } draw(); });
-        const ad = bg.querySelector('.align-done'); if (ad) ad.addEventListener('click', () => { aligning = false; draw(); });
-        const rm = bg.querySelector('.anim-rm'); if (rm) rm.addEventListener('click', async () => { try { await setImg(n, null); } catch (_){} if (data.imgFit) { delete data.imgFit[n]; persist(); } draw(); renderEditor(); });
-        const frame = bg.querySelector('.exa.big'), im = frame.querySelector('.exaimg');
-        if (im){
-          frame.classList.add('fit'); frame.classList.toggle('aligning', aligning);
-          // Rahmen bekommt das Seitenverhältnis des Bildes (sehr hohe Bilder max. 3:4)
-          const setAR = () => { if (im.naturalWidth && im.naturalHeight) frame.style.aspectRatio = Math.max(0.75, im.naturalWidth / im.naturalHeight).toFixed(4); };
-          if (im.complete) setAR(); else im.addEventListener('load', setAR);
-          const save = f => { data.imgFit = data.imgFit || {}; data.imgFit[n] = f; im.setAttribute('style', imgStyle(n)); persist(); };
-          // Verschieben per Touch (iPhone) und Maus; Weg = tatsächlicher Überstand des Bildes
-          let drag = null;
-          // verschieben (1 Finger) und größer/kleiner (2 Finger); Versatz in % der Rahmengröße
-          const clS = v => Math.max(0.3, Math.min(4, Math.round(v * 100) / 100));
-          const clD = v => Math.max(-150, Math.min(150, Math.round(v * 10) / 10));
-          const start = (cx, cy, dist) => {
-            if (!aligning) return false;
-            const r = frame.getBoundingClientRect();
-            drag = { x: cx, y: cy, d: dist || 0, f: imgFit(n), w: r.width, h: r.height };
-            return true;
-          };
-          const move = (cx, cy, dist) => {
-            if (!drag) return;
-            const s2 = drag.d && dist ? clS(drag.f.s * dist / drag.d) : drag.f.s;
-            // magnetisch zur Mitte: nahe 0 rastet das Bild mittig ein, Hilfslinien zeigen es an
-            const snap = v => Math.abs(v) < 4 ? 0 : v;
-            const dx = snap(clD(drag.f.dx + (cx - drag.x) / drag.w * 100)), dy = snap(clD(drag.f.dy + (cy - drag.y) / drag.h * 100));
-            frame.classList.toggle('snap-x', dx === 0); frame.classList.toggle('snap-y', dy === 0);
-            save({ dx, dy, s: s2 });
-          };
-          const end = () => { drag = null; frame.classList.remove('snap-x', 'snap-y'); };
-          frame.insertAdjacentHTML('beforeend', '<i class="guide gx"></i><i class="guide gy"></i>');
-          const tp = ev => { const a = ev.touches[0], b = ev.touches[1];
-            return b ? [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2, Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)] : [a.clientX, a.clientY, 0]; };
-          frame.addEventListener('touchstart', ev => { if (start(...tp(ev))) ev.preventDefault(); }, { passive: false });
-          frame.addEventListener('touchmove', ev => { if (!drag) return; ev.preventDefault(); const t = tp(ev);
-            if (!!t[2] !== !!drag.d) start(...t); else move(...t); }, { passive: false });
-          frame.addEventListener('touchend', ev => { if (ev.touches.length) start(...tp(ev)); else end(); }); frame.addEventListener('touchcancel', end);
-          bg.querySelectorAll('[data-sz]').forEach(b => b.addEventListener('click', () => { const f = imgFit(n); f.s = clS(f.s * (b.dataset.sz > 0 ? 1.15 : 1 / 1.15)); save(f); }));
-          frame.addEventListener('mousedown', ev => { if (start(ev.clientX, ev.clientY)) ev.preventDefault(); });
-          const mm = ev => move(ev.clientX, ev.clientY), mu = () => { end(); removeEventListener('mousemove', mm); removeEventListener('mouseup', mu); };
-          frame.addEventListener('mousedown', () => { if (drag){ addEventListener('mousemove', mm); addEventListener('mouseup', mu); } });
-        }
-      };
-      draw(); document.body.append(bg); const close = () => bg.remove();
-      bg.addEventListener('click', ev => { if (ev.target === bg || ev.target.closest('.dlg-ok')) close(); });
-      return; }
+    if (an){ e.stopPropagation(); openExDialog(an.dataset.anim); return; }
     const btn = e.target.closest('[data-act]');
     if (!btn) return;
     const card = btn.closest('.ex');
