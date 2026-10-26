@@ -760,7 +760,8 @@ input[type=date]{width:100%;display:block}
 .ex-name .nm{flex:1 1 auto;overflow-wrap:break-word;-webkit-hyphens:auto;hyphens:auto}
 .anim-dlg .dlg-btns{grid-template-columns:1fr}
 .exaimg{width:100%;height:100%;object-fit:cover;display:block}
-.exa.big.fit{aspect-ratio:4/3}
+.exa.big.fit{aspect-ratio:4/3;background:#fff}
+.exa.big.fit .exaimg{object-fit:contain;will-change:transform}
 .exa.big.fit.aligning{touch-action:none;cursor:grab;border:2px solid #4B8EFF;box-shadow:0 0 0 4px rgba(75,142,255,.3)}
 .ex-name .nm[data-anim]{cursor:pointer}
 .align-hint{margin:12px 0 0;font-size:13px;font-weight:600;color:#fff}
@@ -881,7 +882,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 67</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 68</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1017,7 +1018,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 67;
+  const MY_VERSION = 68;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1477,8 +1478,8 @@ input[type=date]{width:100%;display:block}
     if (blob){ await mediaDo('readwrite', st => st.put(blob, name)); exImg.set(name, URL.createObjectURL(blob)); }
     else { await mediaDo('readwrite', st => st.delete(name)); exImg.delete(name); }
   }
-  const imgFit = name => Object.assign({ x: 50, y: 50, z: 1 }, (data.imgFit || {})[name] || {});
-  const imgStyle = name => { const f = imgFit(name); return `object-position:${f.x}% ${f.y}%`; };
+  const imgFit = name => Object.assign({ dx: 0, dy: 0 }, (data.imgFit || {})[name] || {});
+  const imgStyle = name => { const f = imgFit(name); return `transform:translate(${f.dx}%, ${f.dy}%)`; };
   function exTile(name, big){
     if (exImg.has(name)) return `<img class="exaimg" src="${exImg.get(name)}" alt="" style="${imgStyle(name)}" draggable="false">`;
     const k = exAnimKey(name);
@@ -1642,20 +1643,17 @@ input[type=date]{width:100%;display:block}
           const save = f => { data.imgFit = data.imgFit || {}; data.imgFit[n] = f; im.setAttribute('style', imgStyle(n)); persist(); };
           // Verschieben per Touch (iPhone) und Maus; Weg = tatsächlicher Überstand des Bildes
           let drag = null;
+          // frei verschieben in alle Richtungen (Versatz in % der Rahmengröße)
           const start = (cx, cy) => {
             if (!aligning) return false;
-            const r = frame.getBoundingClientRect(), iw = im.naturalWidth || r.width, ih = im.naturalHeight || r.height;
-            const sc = Math.max(r.width / iw, r.height / ih);
-            drag = { x: cx, y: cy, f: imgFit(n), ox: iw * sc - r.width, oy: ih * sc - r.height };
+            const r = frame.getBoundingClientRect();
+            drag = { x: cx, y: cy, f: imgFit(n), w: r.width, h: r.height };
             return true;
           };
           const move = (cx, cy) => {
             if (!drag) return;
-            const cl = v => Math.max(0, Math.min(100, Math.round(v * 10) / 10));
-            const f = Object.assign({}, drag.f);
-            if (drag.ox > 1) f.x = cl(drag.f.x - (cx - drag.x) / drag.ox * 100);
-            if (drag.oy > 1) f.y = cl(drag.f.y - (cy - drag.y) / drag.oy * 100);
-            save(f);
+            const cl = v => Math.max(-60, Math.min(60, Math.round(v * 10) / 10));
+            save({ dx: cl(drag.f.dx + (cx - drag.x) / drag.w * 100), dy: cl(drag.f.dy + (cy - drag.y) / drag.h * 100) });
           };
           const end = () => { drag = null; };
           frame.addEventListener('touchstart', ev => { const t = ev.touches[0]; if (start(t.clientX, t.clientY)) ev.preventDefault(); }, { passive: false });
