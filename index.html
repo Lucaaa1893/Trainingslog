@@ -755,6 +755,28 @@ input[type=date]{width:100%;display:block}
 .p-sub{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-text);margin:10px 8px 4px;opacity:.85}
 :root[data-theme="dark"] .p-cat{color:#fff}
 :root[data-theme="dark"] .p-sub{color:#7DB6FF}
+.exa{flex:0 0 auto;width:56px;height:50px;padding:0;margin-right:2px;border-radius:14px;border:1px solid rgba(255,255,255,.75);background:radial-gradient(120% 120% at 30% 0%, rgba(255,255,255,.9), rgba(255,255,255,.45));box-shadow:inset 0 1px 1px #fff, 0 4px 10px -6px rgba(25,40,70,.35);display:grid;place-items:center;overflow:hidden;cursor:pointer}
+.exa .exanim{width:100%;height:100%}
+.ex-name .nm{flex:1 1 auto;overflow-wrap:break-word;-webkit-hyphens:auto;hyphens:auto}
+.anim-dlg .dlg-btns .dlg-ok{flex:1}
+.exanim .bn{stroke:#1d2433;stroke-width:5;stroke-linecap:round}
+.exanim .hd{fill:#1d2433}
+.exanim .eq{fill:#b9c2d0;stroke:#b9c2d0;stroke-width:3;stroke-linecap:round}
+.exanim .cab{stroke:#8a96a8;stroke-width:1.5}
+.exanim .wt{stroke:#2F7BF5;stroke-linecap:round}
+.exanim .pl{fill:#2F7BF5}
+.exanim .gnd{stroke:rgba(29,36,51,.15);stroke-width:2}
+.anim-dlg{text-align:center}
+.anim-dlg h2{margin:12px 0 14px}
+.exa.big{width:100%;height:auto;aspect-ratio:120/106;border-radius:22px;cursor:default}
+:root[data-theme="dark"] .exa{background:radial-gradient(120% 120% at 30% 0%, rgba(255,255,255,.12), rgba(255,255,255,.04));border-color:rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+:root[data-theme="dark"] .exanim .bn{stroke:#E8ECF3}
+:root[data-theme="dark"] .exanim .hd{fill:#E8ECF3}
+:root[data-theme="dark"] .exanim .eq{fill:#4a5263;stroke:#4a5263}
+:root[data-theme="dark"] .exanim .cab{stroke:#6b7486}
+:root[data-theme="dark"] .exanim .wt{stroke:#4B8EFF}
+:root[data-theme="dark"] .exanim .pl{fill:#4B8EFF}
+:root[data-theme="dark"] .exanim .gnd{stroke:rgba(255,255,255,.1)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 [hidden]{display:none!important}
 </style>
@@ -843,7 +865,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span id="ver-txt">Version 62</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span id="ver-txt">Version 63</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -979,7 +1001,7 @@ input[type=date]{width:100%;display:block}
 
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
-  const MY_VERSION = 62;
+  const MY_VERSION = 63;
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1330,6 +1352,99 @@ input[type=date]{width:100%;display:block}
   }, 500);
   TABS.forEach(t => $('#tab-' + t).addEventListener('click', () => { if (!tabHandled) showTab(t); }));
 
+  // ---- Übungs-Animationen (eigene Strichfiguren, SVG/SMIL) ----
+  // Jede Animation: Punkte in Pose A, geänderte Punkte in Pose B, Formen (Knochen, Geräte)
+  const ANIMS = (() => {
+    const BONES_SIDE = [['N','P'],['N','E'],['E','W'],['P','K'],['K','F']];
+    const BONES_FRONT = [['N','P'],['S1','S2'],['S1','E1'],['E1','W1'],['S2','E2'],['E2','W2'],['P','K1'],['K1','F1'],['P','K2'],['K2','F2']];
+    return {
+      chestpress: { A:{H:[44,20],N:[42,31],P:[40,62],K:[62,63],F:[64,92],E:[30,42],W:[52,36]}, B:{E:[60,36],W:[82,35]},
+        eq:[{rect:[30,26,6,40]},{rect:[30,62,28,6]},{seg:[[33,68],[33,94]]},{vbar:'W'}], bones:BONES_SIDE },
+      incline: { A:{H:[26,34],N:[32,43],P:[54,66],K:[74,60],F:[78,92],E:[22,56],W:[34,40]}, B:{E:[38,26],W:[38,8]},
+        eq:[{seg:[[22,40],[58,73]],w:6},{seg:[[58,73],[60,94]]},{seg:[[30,50],[30,94]]},{dumb:'W'}], bones:BONES_SIDE },
+      shoulderpress: { A:{H:[60,18],N:[60,30],S1:[50,32],S2:[70,32],P:[60,62],E1:[38,40],W1:[38,26],E2:[82,40],W2:[82,26],K1:[50,70],F1:[48,93],K2:[70,70],F2:[72,93]},
+        B:{E1:[44,16],W1:[46,2],E2:[76,16],W2:[74,2]},
+        eq:[{rect:[46,60,28,7]},{dumbv:'W1'},{dumbv:'W2'}], bones:BONES_FRONT },
+      fly: { A:{H:[60,18],N:[60,30],S1:[50,32],S2:[70,32],P:[60,62],E1:[30,36],W1:[28,20],E2:[90,36],W2:[92,20],K1:[50,70],F1:[48,93],K2:[70,70],F2:[72,93]},
+        B:{E1:[50,40],W1:[57,22],E2:[70,40],W2:[63,22]},
+        eq:[{rect:[46,60,28,7]},{pad:'W1'},{pad:'W2'}], bones:BONES_FRONT },
+      revfly: { A:{H:[60,18],N:[60,30],S1:[50,32],S2:[70,32],P:[60,62],E1:[52,36],W1:[57,38],E2:[68,36],W2:[63,38],K1:[50,70],F1:[48,93],K2:[70,70],F2:[72,93]},
+        B:{E1:[34,32],W1:[18,32],E2:[86,32],W2:[102,32]},
+        eq:[{rect:[46,60,28,7]},{vbar:'W1'},{vbar:'W2'}], bones:BONES_FRONT },
+      lateral: { A:{H:[60,18],N:[60,30],S1:[50,32],S2:[70,32],P:[60,62],E1:[46,48],W1:[44,62],E2:[74,48],W2:[76,62],K1:[50,70],F1:[48,93],K2:[70,70],F2:[72,93]},
+        B:{E1:[34,30],W1:[20,30],E2:[86,30],W2:[100,30]},
+        eq:[{rect:[46,60,28,7]},{pad:'E1'},{pad:'E2'}], bones:BONES_FRONT },
+      tri_push: { A:{H:[57,14],N:[56,25],P:[56,56],K:[57,75],F:[56,94],E:[60,45],W:[74,33]}, B:{W:[66,66]},
+        eq:[{seg:[[96,2],[96,94]],w:3},{cable:[[94,6],'W']},{vbar:'W'}], bones:BONES_SIDE },
+      tri_oh: { A:{H:[72,18],N:[66,28],P:[56,58],K:[62,76],F:[64,94],E:[84,16],W:[70,8]}, B:{W:[102,12]},
+        extra:[['P','K2'],['K2','F2']], A2:{K2:[48,76],F2:[40,94]},
+        eq:[{seg:[[14,2],[14,94]],w:3},{cable:[[16,40],'W']},{vbar:'W'}], bones:BONES_SIDE },
+      latpull: { A:{H:[48,22],N:[47,33],P:[46,64],K:[68,62],F:[70,92],E:[54,14],W:[56,2]}, B:{E:[38,46],W:[52,34]},
+        eq:[{rect:[38,64,24,6]},{rect:[60,54,12,5]},{cable:[[56,-6],'W']},{bar:'W',w:30}], bones:BONES_SIDE },
+      tbar: { A:{H:[78,38],N:[68,42],P:[40,56],K:[48,76],F:[42,94],E:[70,58],W:[70,76]}, B:{E:[56,46],W:[66,60]},
+        eq:[{cable:[[6,93],'W'],w:4},{plate:'W'}], bones:BONES_SIDE },
+      row: { A:{H:[52,34],N:[48,44],P:[38,72],K:[58,60],F:[80,72],E:[64,52],W:[82,54]}, B:{H:[40,32],N:[40,43],E:[24,54],W:[46,56]},
+        eq:[{rect:[24,72,30,6]},{seg:[[84,64],[84,80]],w:4},{cable:[[112,56],'W']},{vbar:'W'}], bones:BONES_SIDE },
+      backext: { A:{H:[62,85],N:[58,76],P:[48,52],K:[30,66],F:[14,80],E:[56,70],W:[62,72]}, B:{H:[86,30],N:[76,36],E:[70,46],W:[76,48]},
+        eq:[{seg:[[48,58],[54,62]],w:8},{seg:[[12,86],[52,60]],w:3},{seg:[[24,77],[24,94]]},{seg:[[50,61],[50,94]]}], bones:BONES_SIDE },
+      curl_machine: { A:{H:[45,24],N:[44,35],P:[40,66],K:[62,66],F:[64,92],E:[68,48],W:[88,62]}, B:{W:[58,26]},
+        eq:[{seg:[[48,42],[72,54]],w:6},{seg:[[60,52],[60,94]]},{rect:[30,66,24,6]},{vbar:'W'}], bones:BONES_SIDE },
+      curl_cable: { A:{H:[57,14],N:[56,25],P:[56,56],K:[57,75],F:[56,94],E:[58,46],W:[64,68]}, B:{W:[68,30]},
+        eq:[{seg:[[98,30],[98,94]],w:3},{cable:[[96,90],'W']},{vbar:'W'}], bones:BONES_SIDE },
+      squat: { A:{H:[56,10],N:[55,22],P:[54,54],K:[58,74],F:[54,94],E:[46,30],W:[53,20]}, B:{H:[66,32],N:[60,42],P:[38,66],K:[62,70],E:[52,50],W:[58,40]},
+        eq:[{bar:'W',w:34}], bones:BONES_SIDE }
+    };
+  })();
+  function exAnimKey(name){
+    const n = (name || '').toLowerCase();
+    if (/schrägbank|schraegbank|incline/.test(n)) return 'incline';
+    if (/reverse|hintere schulter|face ?pull/.test(n)) return 'revfly';
+    if (/butterfl|\bfly|flys/.test(n)) return 'fly';
+    if (/seitheben|lateral raise/.test(n)) return 'lateral';
+    if (/schulterdrück|schulterdrueck|military|overhead press/.test(n)) return 'shoulderpress';
+    if (/trizeps/.test(n) && /über kopf|ueber kopf|overhead/.test(n) || /french/.test(n)) return 'tri_oh';
+    if (/trizeps|pushdown|dips/.test(n)) return 'tri_push';
+    if (/latzieh|lat pull|klimmz|pull ?up/.test(n)) return 'latpull';
+    if (/t-zug|t zug|t-bar/.test(n)) return 'tbar';
+    if (/rudern|row/.test(n)) return 'row';
+    if (/rückenstreck|rueckenstreck|back ext|hyperext/.test(n)) return 'backext';
+    if (/bizeps|curl|hammer/.test(n)) return /maschine|scott|preacher/.test(n) ? 'curl_machine' : 'curl_cable';
+    if (/kniebeuge|squat|beinpresse|ausfall/.test(n)) return 'squat';
+    if (/brust|bankdrück|bankdrueck|chest/.test(n)) return 'chestpress';
+    const m = typeof muscleOf === 'function' ? muscleOf(n) : '';
+    return { Brust:'chestpress', 'Rücken':'row', Schultern:'shoulderpress', Bizeps:'curl_cable', Trizeps:'tri_push', Beine:'squat' }[m] || null;
+  }
+  function exAnimSVG(key, still){
+    const d = ANIMS[key]; if (!d) return '';
+    const A = Object.assign({}, d.A, d.A2 || {}), B = Object.assign({}, A, d.B);
+    const anim = !still && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const sp = 'calcMode="spline" keyTimes="0;.5;1" keySplines=".45 0 .55 1;.45 0 .55 1" dur="2.4s" repeatCount="indefinite"';
+    const P = (k, o) => typeof k === 'string' ? [A[k], B[k]].map(p => [p[0] + (o ? o[0] : 0), p[1] + (o ? o[1] : 0)]) : [k, k];
+    const at = (name, a, b) => (anim && a !== b) ? `<animate attributeName="${name}" values="${a};${b};${a}" ${sp}/>` : '';
+    const line = (p, q, cls, w) => {
+      const [pa, pb] = p, [qa, qb] = q;
+      return `<line class="${cls}" x1="${pa[0]}" y1="${pa[1]}" x2="${qa[0]}" y2="${qa[1]}"${w ? ` style="stroke-width:${w}"` : ''}>` +
+        at('x1', pa[0], pb[0]) + at('y1', pa[1], pb[1]) + at('x2', qa[0], qb[0]) + at('y2', qa[1], qb[1]) + '</line>';
+    };
+    const circ = (p, r, cls) => `<circle class="${cls}" cx="${p[0][0]}" cy="${p[0][1]}" r="${r}">` + at('cx', p[0][0], p[1][0]) + at('cy', p[0][1], p[1][1]) + '</circle>';
+    let out = '';
+    (d.eq || []).forEach(e => {
+      if (e.rect) out += `<rect class="eq" x="${e.rect[0]}" y="${e.rect[1]}" width="${e.rect[2]}" height="${e.rect[3]}" rx="2.5"/>`;
+      if (e.seg) out += line(P(e.seg[0]), P(e.seg[1]), 'eq', e.w);
+      if (e.cable) out += line(P(e.cable[0]), P(e.cable[1]), 'cab', e.w);
+    });
+    [...d.bones, ...(d.extra || [])].forEach(([a, b]) => out += line(P(a), P(b), 'bn'));
+    out += circ(P('H'), 7.5, 'hd');
+    (d.eq || []).forEach(e => {
+      if (e.dumb) out += line(P(e.dumb, [-7, -3]), P(e.dumb, [7, 3]), 'wt', 6);
+      if (e.dumbv) out += line(P(e.dumbv, [-7, 0]), P(e.dumbv, [7, 0]), 'wt', 6);
+      if (e.vbar) out += line(P(e.vbar, [0, -5]), P(e.vbar, [0, 5]), 'wt', 4.5);
+      if (e.bar) out += line(P(e.bar, [-e.w / 2, 0]), P(e.bar, [e.w / 2, 0]), 'wt', 4);
+      if (e.pad) out += line(P(e.pad, [0, -6]), P(e.pad, [0, 6]), 'wt', 7);
+      if (e.plate) out += circ(P(e.plate, [6, 4]), 9, 'pl');
+    });
+    return `<svg class="exanim" viewBox="0 -8 120 106" aria-hidden="true"><line class="gnd" x1="4" y1="96" x2="116" y2="96"/>${out}</svg>`;
+  }
   // ---- editor ----
   const MOODS = { 1: '😫', 2: '😕', 3: '😐', 4: '🙂', 5: '💪' };
   const MOOD_TXT = { 1: 'Schlecht', 2: 'Mäßig', 3: 'Mittel', 4: 'Gut', 5: 'Stark' };
@@ -1395,7 +1510,7 @@ input[type=date]{width:100%;display:block}
           <button class="icon" type="button" data-act="down" ${i===ex.length-1?'disabled':''} aria-label="Übung nach unten">↓</button>
           <button class="icon rm" type="button" data-act="rm-ex" aria-label="Übung entfernen">✕</button>
         </div>
-        <div class="ex-name"><span class="nm">${esc(e.name) || 'Übung wählen'}</span><button class="chev" type="button" data-act="pick" aria-label="Übung ${i+1} ändern: ${esc(e.name || 'keine gewählt')}">Ändern</button></div>
+        <div class="ex-name">${exAnimKey(e.name) ? `<button type="button" class="exa" data-anim="${esc(e.name)}" aria-label="Animation zu ${esc(e.name)} groß anzeigen">${exAnimSVG(exAnimKey(e.name))}</button>` : ''}<span class="nm">${esc(e.name) || 'Übung wählen'}</span><button class="chev" type="button" data-act="pick" aria-label="Übung ${i+1} ändern: ${esc(e.name || 'keine gewählt')}">Ändern</button></div>
         <button class="ex-sum" type="button" data-act="reopen">✓ ${e.sets.length} ${e.sets.length===1?'Satz':'Sätze'} erledigt · antippen zum Öffnen</button>
         <input class="txt note" data-f="note" placeholder="Maschineneinstellung, z. B. Sitz Stufe 4" value="${esc(e.note)}" aria-label="Maschineneinstellung">
         <div class="sets-head" title="Graue Zahlen zeigen die Werte vom letzten Mal"><span>#</span><span>Wdh</span><span>kg</span><span>Art</span><span></span></div>
@@ -1471,6 +1586,12 @@ input[type=date]{width:100%;display:block}
     if (e.key === 'Enter' && e.target.classList.contains('ex-name')) { e.preventDefault(); e.target.blur(); }
   });
   $('#editor').addEventListener('click', e => {
+    const an = e.target.closest('[data-anim]');
+    if (an){ e.stopPropagation(); const n = an.dataset.anim; const bg = document.createElement('div'); bg.className = 'dlg-bg';
+      bg.innerHTML = `<div class="dlg anim-dlg" role="dialog" aria-modal="true" aria-label="${esc(n)}"><div class="exa big">${exAnimSVG(exAnimKey(n))}</div><h2>${esc(n)}</h2><div class="dlg-btns"><button type="button" class="dlg-ok">Schließen</button></div></div>`;
+      document.body.append(bg); const close = () => bg.remove();
+      bg.addEventListener('click', ev => { if (ev.target === bg || ev.target.closest('.dlg-ok')) close(); });
+      return; }
     const btn = e.target.closest('[data-act]');
     if (!btn) return;
     const card = btn.closest('.ex');
