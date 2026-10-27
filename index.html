@@ -947,7 +947,7 @@ input[type=date]{width:100%;display:block}
   <div id="progress"></div>
 </section>
 
-<p class="ver"><span hidden id="ver-txt">Version 86</span><span id="ver-label">Version 8.4</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+<p class="ver"><span hidden id="ver-txt">Version 87</span><span id="ver-label">Version 8.5</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1096,7 +1096,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 86;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 87;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -2469,11 +2469,6 @@ input[type=date]{width:100%;display:block}
         ${cells}
       </div>
       <div class="legend cal-legend">${legend}</div>
-      <div class="vstats">
-        <div><b>${monthSes.length}</b><span>Trainings${prevCount || monthSes.length ? ` · <em class="${diff > 0 ? 'up' : diff < 0 ? 'down' : ''}">${diff > 0 ? '+' : diff < 0 ? '−' : '±'}${Math.abs(diff)}</em> zum Vormonat` : ''}</span></div>
-        <div><b>${perWeek}</b><span>Ø pro Woche</span></div>
-        <div><b>${fmtVol(vol)}</b><span>Volumen im Monat</span></div>
-      </div>
       ${detail}
     </div>`;
   }
