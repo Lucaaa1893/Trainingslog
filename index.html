@@ -988,7 +988,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 91</span><span id="ver-label">Version 8.9</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 92</span><span id="ver-label">Version 9.0</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1008,6 +1008,7 @@ input[type=date]{width:100%;display:block}
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const today = () => { const d = new Date(); const z = new Date(d.getTime()-d.getTimezoneOffset()*60000); return z.toISOString().slice(0,10); };
   const fmtDate = iso => new Date(iso+'T00:00').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
+  const setTxt = x => x.kg == null || x.kg === '' ? `${x.reps ?? '–'} Wdh` : `${x.reps ?? '–'} × ${String(x.kg).replace('.', ',')} kg`;
   const fmtKg = n => (n==null||n==='') ? '–' : String(n).replace('.',',');
 
   // ---- storage (per browser; wrapped because storage can be unavailable) ----
@@ -1163,7 +1164,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 91;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 92;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -2032,7 +2033,7 @@ input[type=date]{width:100%;display:block}
           <div class="set${s.kind==='drop'?' drop':''}${s.kind==='warm'?' warm':''}${s.done?' isdone':''}">
             <button class="num chk${s.done?' on':''}" type="button" data-act="done" data-j="${j}" aria-pressed="${!!s.done}" aria-label="${s.kind==='warm'?'Aufwärmsatz':'Satz '+wn} ${s.done?'erledigt':'abhaken'}">${s.done?'✓':s.kind==='warm'?'A':wn}</button>
             <input type="number" inputmode="numeric" min="0" step="1" data-f="reps" data-j="${j}" value="${esc(s.reps)}" placeholder="${L && L.reps != null ? L.reps : ''}" aria-label="Wiederholungen, Satz ${j+1}">
-            <input type="number" inputmode="decimal" min="0" step="0.5" data-f="kg" data-j="${j}" value="${esc(s.kg)}" placeholder="${L && L.kg != null ? fmtKg(L.kg) : ''}" aria-label="Gewicht in kg, Satz ${j+1}">
+            <input type="text" inputmode="decimal" autocomplete="off" data-f="kg" data-j="${j}" value="${esc(kgTxt(s.kg))}" placeholder="${L && L.kg != null ? fmtKg(L.kg) : ''}" aria-label="Gewicht in kg, Satz ${j+1}">
             <button class="kind-btn" type="button" data-act="kind" data-j="${j}" aria-haspopup="menu" aria-expanded="false" aria-label="Satzart, Satz ${j+1}: ${KIND_LABEL[s.kind||'']}">${KIND_LABEL[s.kind||'']}${CHEV}</button>
             <button class="icon" type="button" data-act="rm-set" data-j="${j}" aria-label="Satz ${j+1} entfernen">−</button>
           </div>
@@ -2041,7 +2042,7 @@ input[type=date]{width:100%;display:block}
             <div class="drop-row">
               <span class="drop-arrow" aria-hidden="true">↳</span>
               <input type="number" inputmode="numeric" min="0" step="1" data-f="dropReps" data-j="${j}" data-k="${k}" value="${esc(d.reps)}" placeholder="${LD && LD.reps != null ? LD.reps : 'Wdh'}" aria-label="Wiederholungen nach Drop ${k+1}, Satz ${j+1}">
-              <input type="number" inputmode="decimal" min="0" step="0.5" data-f="dropKg" data-j="${j}" data-k="${k}" value="${esc(d.kg)}" placeholder="${LD && LD.kg != null ? fmtKg(LD.kg) : 'kg'}" aria-label="Gewicht nach Drop ${k+1} in kg, Satz ${j+1}">
+              <input type="text" inputmode="decimal" autocomplete="off" data-f="dropKg" data-j="${j}" data-k="${k}" value="${esc(kgTxt(d.kg))}" placeholder="${LD && LD.kg != null ? fmtKg(LD.kg) : 'kg'}" aria-label="Gewicht nach Drop ${k+1} in kg, Satz ${j+1}">
               <span class="drop-lbl">Drop ${k+1}</span>
               <button class="icon" type="button" data-act="rm-drop" data-j="${j}" data-k="${k}" aria-label="Drop ${k+1} entfernen">−</button>
             </div>`; }).join('')}
@@ -2057,6 +2058,9 @@ input[type=date]{width:100%;display:block}
     document.querySelectorAll('#editor input').forEach(inp => inp.setAttribute('enterkeyhint', 'next'));
   }
   function saveDraft(){ persist(); }
+  // Gewicht als Text mit Komma (deutsche iPhone-Tastatur), gespeichert wird beides
+  const numOrNull = v => { if (v === '' || v == null) return null; const n = Number(String(v).replace(',', '.')); return isFinite(n) ? n : null; };
+  const kgTxt = v => v == null ? '' : String(v).replace('.', ',');
 
   // Input changes update state without re-rendering, so focus is kept.
   $('#editor').addEventListener('input', e => {
@@ -2064,6 +2068,7 @@ input[type=date]{width:100%;display:block}
     if (!card) return;
     const ex = data.draft.exercises[+card.dataset.i];
     const f = e.target.dataset.f;
+    if (f === 'kg' || f === 'dropKg'){ const c = e.target.value.replace(/[^0-9.,]/g, '').replace(/([.,].*)[.,]/, '$1'); if (c !== e.target.value) e.target.value = c; }
     if (f === 'name' || f === 'note') { ex[f] = e.target.value; if (f === 'name') fitName(e.target); }
     else if (f === 'dropReps' || f === 'dropKg') {
       const set = ex.sets[+e.target.dataset.j];
@@ -2275,7 +2280,7 @@ input[type=date]{width:100%;display:block}
         name: (e.name||'').trim(),
         note: (e.note||'').trim(),
         sets: e.sets.filter(s => s.reps !== '' || s.kg !== '')
-          .map(s => Object.assign({ reps: s.reps === '' ? null : Number(s.reps), kg: s.kg === '' ? null : Number(String(s.kg).replace(',','.')) }, s.kind === 'warm' ? { kind:'warm' } : s.kind === 'drop' ? { kind:'drop', drops:(s.drops||[]).map(d => ({ reps: d.reps === '' || d.reps == null ? null : Number(d.reps), kg: d.kg === '' || d.kg == null ? null : Number(String(d.kg).replace(',','.')) })).filter(d => d.reps != null || d.kg != null) } : {}))
+          .map(s => Object.assign({ reps: s.reps === '' ? null : Number(s.reps), kg: numOrNull(s.kg) }, s.kind === 'warm' ? { kind:'warm' } : s.kind === 'drop' ? { kind:'drop', drops:(s.drops||[]).map(d => ({ reps: d.reps === '' || d.reps == null ? null : Number(d.reps), kg: numOrNull(d.kg) })).filter(d => d.reps != null || d.kg != null) } : {}))
       }))
       .filter(e => e.name && e.sets.length);
     if (!exercises.length){
@@ -2368,7 +2373,7 @@ input[type=date]{width:100%;display:block}
               <div class="hx-head"><div style="font-weight:600">${esc(e.name)}</div>${I.cmp ? `<span class="cmp${I.cmp.dir > 0 ? ' up' : I.cmp.dir < 0 ? ' down' : ''}">${I.cmp.txt}</span>` : '<span class="cmp">neu</span>'}</div>
               ${e.note ? `<div class="muted small">${esc(e.note)}</div>` : ''}
               <div class="chips">
-                ${e.sets.map((x,j) => ` <span class="chip${x.kind==='drop'?' drop':''}${x.kind==='warm'?' warm':''}${x === I.pr ? ' pr' : ''}">${x === I.pr ? '🏆 ' : ''}${x.kind==='warm'?'Aufw.':'Satz ' + (j+1)}: ${x.reps ?? '–'} × ${fmtKg(x.kg)} kg${x.kind==='drop' ? (dropsOf(x).length ? dropsOf(x).map(d => ` ↘ ${d.reps ?? '–'} × ${fmtKg(d.kg)} kg`).join('') : ' · Drop') : ''}</span>`).join('')}
+                ${e.sets.map((x,j) => ` <span class="chip${x.kind==='drop'?' drop':''}${x.kind==='warm'?' warm':''}${x === I.pr ? ' pr' : ''}">${x === I.pr ? '🏆 ' : ''}${x.kind==='warm'?'Aufw.':'Satz ' + e.sets.slice(0, j + 1).filter(y => y.kind !== 'warm').length}: ${setTxt(x)}${x.kind==='drop' ? (dropsOf(x).length ? dropsOf(x).map(d => ` ↘ ${setTxt(d)}`).join('') : ' · Drop') : ''}</span>`).join('')}
               </div>
             </div>`; }).join('')}
           <div class="hx-btns"><button class="ghost alt" type="button" data-edit="${s.id}">✎ Bearbeiten</button><button class="ghost" type="button" data-share="${s.id}">Teilen-Karte</button></div>
