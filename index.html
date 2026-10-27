@@ -1000,7 +1000,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 96</span><span id="ver-label">Version 9.4</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 97</span><span id="ver-label">Version 9.5</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1069,7 +1069,13 @@ input[type=date]{width:100%;display:block}
   // Übungs-Bibliothek: erscheint in Auswahl und Übungen-Tab, aber nicht automatisch im Tagesplan
   const LIBRARY = {"Push": {"Brust": ["Bankdrücken mit Langhantel", "Schrägbankdrücken mit Langhantel", "Bankdrücken mit Kurzhanteln", "Fliegende mit Kurzhanteln", "Cable Crossover am Kabelturm", "Brustpresse schräg an der Maschine", "Liegestütze", "Dips (Brust)"], "Schultern": ["Schulterdrücken mit Langhantel (Military Press)", "Arnold Press", "Schulterdrücken an der Maschine", "Seitheben mit Kurzhanteln", "Seitheben am Kabelzug", "Frontheben mit Kurzhanteln"], "Trizeps": ["Dips am Barren", "Trizepsdrücken am Kabel mit Seil", "French Press mit SZ-Stange", "Enges Bankdrücken", "Trizeps-Kickbacks mit Kurzhantel", "Trizepsdrücken über Kopf mit Kurzhantel"]}, "Pull": {"Rücken": ["Klimmzüge", "Klimmzüge im Untergriff (Chin-ups)", "Latziehen eng", "Kabelrudern sitzend", "Langhantelrudern vorgebeugt", "Kurzhantelrudern einarmig", "Rudern an der Maschine", "Kreuzheben", "Überzüge am Kabel (gestreckte Arme)"], "Schultern": ["Face Pulls am Kabel", "Reverse Flys mit Kurzhanteln", "Shrugs mit Kurzhanteln"], "Bizeps": ["Langhantelcurls", "Kurzhantelcurls", "Hammercurls", "SZ-Curls", "Konzentrationscurls", "Kabelcurls mit Stange", "Scottcurls mit SZ-Stange"]}, "Leg": {"Oberschenkel vorne": ["Frontkniebeuge", "Goblet Squat", "Hackenschmidt-Kniebeuge", "Bulgarian Split Squats", "Ausfallschritte", "Step-ups"], "Oberschenkel hinten": ["Rumänisches Kreuzheben", "Beinbeuger sitzend", "Nordic Curls"], "Hüfte": ["Hip Thrust", "Glute Bridge", "Po-Kickbacks am Kabel"], "Waden": ["Wadenheben stehend"]}, "Eigene": {"Bauch": ["Crunches", "Crunches am Kabel", "Plank", "Beinheben hängend", "Russian Twists", "Ab-Roller"]}};
   const LIB_G = {}, LIB_C = {};
-  Object.entries(LIBRARY).forEach(([c, gs]) => Object.entries(gs).forEach(([g, ns]) => ns.forEach(n => { LIB_G[n] = g; LIB_C[n] = c; })));
+  // umbenannte Bibliotheks-Übungen (Original-Name → eigener Name)
+  function applyLibRenames(){
+    Object.keys(LIB_G).forEach(k => delete LIB_G[k]); Object.keys(LIB_C).forEach(k => delete LIB_C[k]);
+    const r = data.libRenames || {};
+    Object.entries(LIBRARY).forEach(([c, gs]) => Object.entries(gs).forEach(([g, ns]) => ns.forEach(n0 => { const n = r[n0] || n0; LIB_G[n] = g; LIB_C[n] = c; })));
+  }
+  applyLibRenames();
   function lastNote(name){
     for (let k = data.sessions.length - 1; k >= 0; k--){
       const e = data.sessions[k].exercises.find(x => x.name === name);
@@ -1184,7 +1190,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 96;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 97;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1773,6 +1779,8 @@ input[type=date]{width:100%;display:block}
   async function renameEx(oldN, newN){
     const orig = Object.values(TEMPLATES).flat().find(t => tplName(t) === oldN);
     if (orig){ data.renames = data.renames || {}; if (orig === newN) delete data.renames[orig]; else data.renames[orig] = newN; }
+    const lib0 = Object.keys(data.libRenames || {}).find(k => data.libRenames[k] === oldN) || (Object.values(LIBRARY).some(g => Object.values(g).some(a => a.includes(oldN))) ? oldN : null);
+    if (lib0 && !orig){ data.libRenames = data.libRenames || {}; if (lib0 === newN) delete data.libRenames[lib0]; else data.libRenames[lib0] = newN; applyLibRenames(); }
     (data.custom || []).forEach((c, k) => { if (typeof c === 'string' ? c === oldN : c.name === oldN){ if (typeof c === 'string') data.custom[k] = newN; else c.name = newN; } });
     data.sessions.forEach(s => s.exercises.forEach(e => { if (e.name === oldN) e.name = newN; }));
     const fix = d => d && Array.isArray(d.exercises) && d.exercises.forEach(e => { if (e.name === oldN) e.name = newN; });
@@ -3143,7 +3151,7 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
       const keys = await mediaDo('readonly', st => st.getAllKeys());
       for (const k of keys || []){ const blob = await mediaDo('readonly', st => st.get(k)); const d = blob && await toData(blob); if (d) images[k] = d; }
     } catch(_){}
-    const json = JSON.stringify({ app:'trainingslog', version:2, exported:new Date().toISOString(), sessions:data.sessions, custom:data.custom, days:data.days, notes:data.notes, imgFit:data.imgFit, renames:data.renames, health:data.health, healthKey:data.healthKey, images }, null, 1);
+    const json = JSON.stringify({ app:'trainingslog', version:2, exported:new Date().toISOString(), sessions:data.sessions, custom:data.custom, days:data.days, notes:data.notes, imgFit:data.imgFit, renames:data.renames, libRenames:data.libRenames, health:data.health, healthKey:data.healthKey, images }, null, 1);
     const name = 'trainingslog-' + today() + '.json';
     try {
       const file = new File([json], name, { type:'application/json' });
@@ -3171,6 +3179,7 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
       if (obj.healthKey && !data.healthKey) data.healthKey = obj.healthKey;
       if (obj.health) data.health = Object.assign({}, obj.health, data.health || {});
       if (obj.renames) data.renames = Object.assign({}, obj.renames, data.renames || {});
+      if (obj.libRenames){ data.libRenames = Object.assign({}, obj.libRenames, data.libRenames || {}); applyLibRenames(); }
       if (obj.imgFit) data.imgFit = Object.assign({}, data.imgFit || {}, obj.imgFit);
       if (obj.images) Object.entries(obj.images).forEach(([k, d]) => { m++;
         fetch(d).then(r => r.blob()).then(b => setImg(k, b)).then(() => renderEditor()).catch(() => {}); });
