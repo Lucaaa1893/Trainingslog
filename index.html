@@ -61,6 +61,7 @@ h2{font-size:20px;font-weight:600;letter-spacing:-.01em}
 .small{font-size:13px}
 .kicker{font-size:13px;color:var(--muted);margin-top:4px}
 header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:8px 2px 16px}
+@media (max-width:360px){ h1{font-size:28px} header{gap:8px} .hdr-right .pill{padding-left:8px;padding-right:8px;font-size:12px} .tab{font-size:12px} }
 
 /* Glas-Grundmaterial */
 .card,.tabs,details.session,details.p-ex,.p-tile,.pill,.empty,.sheet{
@@ -988,7 +989,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 92</span><span id="ver-label">Version 9.0</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 93</span><span id="ver-label">Version 9.1</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1071,8 +1072,12 @@ input[type=date]{width:100%;display:block}
   // Übungsliste eines Tages: Push/Pull immer in der ursprünglichen Reihenfolge,
   // eigene Tage in der Reihenfolge, in der ihre Übungen angelegt wurden
   function templateFor(type){
-    if (TEMPLATES[type]) return TEMPLATES[type].map(tplName);
-    return (data.custom || []).filter(c => typeof c === 'object' && c.cat === type).map(c => c.name);
+    // feste Übungen + selbst angelegte Übungen dieses Tages + was beim letzten Training dieses Tages dabei war
+    const base = TEMPLATES[type] ? TEMPLATES[type].map(tplName) : [];
+    const own = (data.custom || []).filter(c => typeof c === 'object' && c.cat === type).map(c => c.name);
+    const last = TEMPLATES[type] ? [] : (([...data.sessions].filter(x => x.type === type).sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id))[0] || {}).exercises || []).map(e => e.name);
+    const out = []; [...base, ...last, ...own].forEach(n => { if (n && !out.includes(n)) out.push(n); });
+    return out;
   }
   // leere Sätze nach Einstellung (Anzahl + optional Aufwärmsatz vorne)
   function newSets(){
@@ -1164,7 +1169,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 92;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 93;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
