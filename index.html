@@ -800,9 +800,13 @@ input[type=date]{width:100%;display:block}
 .set-top .btn{width:auto;margin:0;padding:10px 18px}
 .set-page .card{margin-bottom:12px}
 .set-page .card h2{margin:0 0 8px}
-.set-seg{display:grid;grid-template-columns:repeat(auto-fit,minmax(60px,1fr));gap:6px;padding:4px;border-radius:999px;background:rgba(120,130,150,.14)}
-.set-seg button{border:0;border-radius:999px;padding:11px 4px;font:600 15px/1 var(--f-body);background:transparent;color:var(--fg);transition:background .2s, color .2s}
-.set-seg button.def{color:#fff;background:var(--shine), linear-gradient(180deg,#4B8EFF,#2F7BF5);box-shadow:0 6px 14px -8px rgba(47,123,245,.9)}
+.set-seg{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(60px,1fr));gap:6px;padding:4px;border-radius:999px;background:rgba(120,130,150,.14);touch-action:pan-y;-webkit-user-select:none;user-select:none}
+.set-seg button{position:relative;z-index:1;border:0;border-radius:999px;padding:11px 4px;font:600 15px/1 var(--f-body);background:transparent;color:var(--fg);transition:color .2s, scale .3s var(--spring)}
+.set-seg button.def{color:#fff}
+.set-seg.grab button.def:not(.hov){color:var(--fg)}
+.set-seg.grab button.hov{color:#fff;scale:1.12}
+.seg-pill{position:absolute;top:4px;bottom:4px;left:0;border-radius:999px;z-index:0;pointer-events:none;background:var(--shine), linear-gradient(180deg,#4B8EFF,#2F7BF5);box-shadow:0 6px 14px -8px rgba(47,123,245,.9), inset 0 1px 1px rgba(255,255,255,.5);transition:transform .45s cubic-bezier(.3,1.3,.5,1), width .3s ease, scale .35s var(--spring)}
+.set-seg.grab .seg-pill{transition:width .3s ease, scale .35s var(--spring);scale:1.08 1.22;box-shadow:0 10px 22px -8px rgba(47,123,245,.9), inset 0 0 0 1.5px rgba(255,255,255,.7), inset 0 2px 2px rgba(255,255,255,.7)}
 :root[data-theme="dark"] .set-seg{background:rgba(255,255,255,.07)}
 .set-day{display:flex;align-items:center;gap:10px;padding:10px 2px;border-top:1px solid var(--line2)}
 .set-day:first-child{border-top:0}
@@ -964,6 +968,7 @@ input[type=date]{width:100%;display:block}
   <div class="set-top"><h1 id="set-t">Einstellungen</h1><button type="button" class="btn set-done" id="set-done">Fertig</button></div>
   <div class="card"><h2>Darstellung</h2><div class="set-seg" id="set-theme"><button type="button" data-th="light">☀︎ Hell</button><button type="button" data-th="dark">☾ Dunkel</button></div></div>
   <div class="card"><h2>Standard-Sätze pro Übung</h2><p class="muted small">So viele leere Sätze bekommt jede Übung beim Start eines Trainings.</p><div class="set-seg" id="set-sets"><button type="button" data-sets="2">2</button><button type="button" data-sets="3">3</button><button type="button" data-sets="4">4</button><button type="button" data-sets="5">5</button></div></div>
+  <div class="card"><h2>Aufwärmsatz</h2><p class="muted small">Wenn an, bekommt jede Übung oben automatisch einen Aufwärmsatz.</p><div class="set-seg" id="set-warm"><button type="button" data-warm="0">Aus</button><button type="button" data-warm="1">An</button></div></div>
   <div class="card"><h2>Trainingstage</h2><p class="muted small">Push, Pull und Leg sind fest. Eigene Tage kannst du umbenennen oder löschen.</p><div id="set-days"></div><button type="button" class="ghost" id="set-day-new">+ Neuer Trainingstag</button></div>
   <div class="card"><h2>Health-Werte</h2><div id="set-health"></div></div>
   <div class="card backup" style="margin-top:0">
@@ -978,7 +983,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 88</span><span id="ver-label">Version 8.6</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 89</span><span id="ver-label">Version 8.7</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1063,8 +1068,27 @@ input[type=date]{width:100%;display:block}
     if (TEMPLATES[type]) return TEMPLATES[type].map(tplName);
     return (data.custom || []).filter(c => typeof c === 'object' && c.cat === type).map(c => c.name);
   }
+  // leere Sätze nach Einstellung (Anzahl + optional Aufwärmsatz vorne)
+  function newSets(){
+    const n = Math.max(1, Math.min(8, +data.defSets || 3)), a = Array.from({ length: n }, () => ({ reps:'', kg:'' }));
+    if (data.warmup) a.unshift({ reps:'', kg:'', kind:'warm' });
+    return a;
+  }
+  // aktuelles Training an die Einstellung anpassen – nur leere Sätze werden ergänzt oder entfernt
+  function fitDraftSets(){
+    const d = data.draft; if (!d || !Array.isArray(d.exercises)) return;
+    const n = Math.max(1, Math.min(8, +data.defSets || 3));
+    const empty = x => (x.reps === '' || x.reps == null) && (x.kg === '' || x.kg == null) && !x.done && x.kind !== 'drop';
+    d.exercises.forEach(e => {
+      if (data.warmup && !(e.sets[0] && e.sets[0].kind === 'warm')) e.sets.unshift({ reps:'', kg:'', kind:'warm' });
+      if (!data.warmup && e.sets[0] && e.sets[0].kind === 'warm' && empty(e.sets[0])) e.sets.shift();
+      let work = e.sets.filter(x => x.kind !== 'warm').length;
+      while (work < n){ e.sets.push({ reps:'', kg:'' }); work++; }
+      for (let i = e.sets.length - 1; i >= 0 && work > n; i--){ const x = e.sets[i]; if (x.kind === 'warm') continue; if (!empty(x)) break; e.sets.splice(i, 1); work--; }
+    });
+  }
   function fromTemplate(type){
-    return templateFor(type).map(n => ({ name: n, note: lastNote(n), sets: Array.from({ length: Math.max(1, Math.min(8, +data.defSets || 3)) }, () => ({ reps:'', kg:'' })) }));
+    return templateFor(type).map(n => ({ name: n, note: lastNote(n), sets: newSets() }));
   }
   function untouched(d){
     return d.exercises.every(e => e.sets.every(s => s.reps === '' && s.kg === '' && s.kind !== 'drop'));
@@ -1127,7 +1151,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 88;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 89;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -2189,7 +2213,7 @@ input[type=date]{width:100%;display:block}
     if (!allExercises().has(name)) { data.custom = data.custom || []; data.custom.push({ name, cat: cat || defaultCat() }); }
     let idx;
     if (pickFor === 'new'){
-      data.draft.exercises.push({ name, note: lastNote(name), sets: Array.from({ length: Math.max(1, Math.min(8, +data.defSets || 3)) }, () => ({ reps:'', kg:'' })) });
+      data.draft.exercises.push({ name, note: lastNote(name), sets: newSets() });
       idx = data.draft.exercises.length - 1;
     } else {
       idx = pickFor;
@@ -2910,14 +2934,47 @@ input[type=date]{width:100%;display:block}
     if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark'); else document.documentElement.removeAttribute('data-theme');
     const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', t === 'dark' ? '#0B0D12' : '#E6E9EE');
     document.querySelectorAll('#set-theme [data-th]').forEach(b => b.classList.toggle('def', b.dataset.th === t));
+    const st = document.getElementById('set-theme'); if (st && typeof placePill === 'function') requestAnimationFrame(() => placePill(st));
   }
   let theme = 'light'; try { theme = localStorage.getItem('tl-theme') || 'light'; } catch(_){}
   applyTheme(theme);
   $('#set-theme').addEventListener('click', e => { const b = e.target.closest('[data-th]'); if (!b) return; theme = b.dataset.th; try { localStorage.setItem('tl-theme', theme); } catch(_){} applyTheme(theme); });
+  // ---- Wischbare Auswahl (Glas-Pille wie in der Tab-Leiste) ----
+  function placePill(seg, x){
+    let pill = seg.querySelector('.seg-pill'); if (!pill){ pill = document.createElement('span'); pill.className = 'seg-pill'; seg.prepend(pill); }
+    const btns = [...seg.querySelectorAll('button')], on = btns.find(b => b.classList.contains('def')) || btns[0]; if (!on) return;
+    const w = on.offsetWidth;
+    const left = x == null ? on.offsetLeft : Math.max(btns[0].offsetLeft, Math.min(btns[btns.length - 1].offsetLeft, x - w / 2));
+    pill.style.width = w + 'px'; pill.style.transform = `translateX(${left}px)`;
+    if (x != null) btns.forEach(b => b.classList.toggle('hov', Math.abs(b.offsetLeft - left) < w / 2));
+  }
+  let segDrag = null;
+  document.addEventListener('pointerdown', e => {
+    const seg = e.target.closest('.set-seg'); if (!seg) return;
+    segDrag = { seg, x0: e.clientX, moved: false, left: seg.getBoundingClientRect().left };
+  });
+  document.addEventListener('pointermove', e => {
+    if (!segDrag) return;
+    if (!segDrag.moved && Math.abs(e.clientX - segDrag.x0) < 6) return;
+    segDrag.moved = true; segDrag.seg.classList.add('grab');
+    placePill(segDrag.seg, e.clientX - segDrag.left);
+  });
+  const segEnd = e => {
+    if (!segDrag) return; const d = segDrag; segDrag = null; d.seg.classList.remove('grab');
+    d.seg.querySelectorAll('button').forEach(b => b.classList.remove('hov'));
+    if (!d.moved) return;
+    const x = e.clientX - d.left, btns = [...d.seg.querySelectorAll('button')];
+    const hit = btns.reduce((a, b) => Math.abs(b.offsetLeft + b.offsetWidth / 2 - x) < Math.abs(a.offsetLeft + a.offsetWidth / 2 - x) ? b : a);
+    d.seg._noClick = true; setTimeout(() => { d.seg._noClick = false; }, 50);
+    hit.click();
+  };
+  document.addEventListener('pointerup', segEnd); document.addEventListener('pointercancel', e => { if (segDrag){ segDrag.seg.classList.remove('grab'); segDrag = null; } });
   // ---- Einstellungen ----
   const setsN = () => Math.max(1, Math.min(8, +data.defSets || 3));
   function renderSettings(){
     document.querySelectorAll('#set-sets [data-sets]').forEach(b => b.classList.toggle('def', +b.dataset.sets === setsN()));
+    document.querySelectorAll('#set-warm [data-warm]').forEach(b => b.classList.toggle('def', +b.dataset.warm === (data.warmup ? 1 : 0)));
+    requestAnimationFrame(() => document.querySelectorAll('.set-seg').forEach(sg => placePill(sg)));
     const own = days().filter(d => !['Push','Pull','Leg'].includes(d.name));
     $('#set-days').innerHTML = days().map(d => `<div class="set-day"><span class="dotc" style="background:${d.color}"></span><b>${esc(d.name)}</b>${own.some(o => o.name === d.name)
       ? `<button type="button" class="set-mini" data-dren="${esc(d.name)}">Umbenennen</button><button type="button" class="set-mini clr" data-ddel="${esc(d.name)}">Löschen</button>` : '<small>fest</small>'}</div>`).join('');
@@ -2932,7 +2989,8 @@ input[type=date]{width:100%;display:block}
   $('#gear').addEventListener('click', openSettings);
   $('#set-done').addEventListener('click', closeSettings);
   $('#settings').addEventListener('click', async e => {
-    const sb = e.target.closest('[data-sets]'); if (sb){ data.defSets = +sb.dataset.sets; persist(); renderSettings(); return; }
+    const sb = e.target.closest('[data-sets]'); if (sb){ data.defSets = +sb.dataset.sets; fitDraftSets(); persist(); renderSettings(); renderEditor(); return; }
+    const wb = e.target.closest('[data-warm]'); if (wb){ data.warmup = wb.dataset.warm === '1'; fitDraftSets(); persist(); renderSettings(); renderEditor(); return; }
     if (e.target.closest('#set-day-new')){ closeSettings(); showTab('new'); openNewDay(); return; }
     const dr = e.target.closest('[data-dren]'); if (dr){ renameDay(dr.dataset.dren); return; }
     const dd = e.target.closest('[data-ddel]'); if (dd){ deleteDay(dd.dataset.ddel); return; }
