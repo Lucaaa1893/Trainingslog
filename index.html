@@ -793,7 +793,10 @@ input[type=date]{width:100%;display:block}
 .exl-txt b{font-size:15px;font-weight:600;line-height:1.25}
 .exl-txt small{font-size:12px;color:var(--muted)}
 .exl-go{font-size:22px;color:var(--muted);flex:none}
-.nx-seg{grid-template-columns:repeat(auto-fit,minmax(70px,1fr))}
+.nx-seg{display:flex;flex-wrap:wrap;gap:8px}
+.nx-day{flex-wrap:nowrap;gap:6px}
+.nx-day button{flex:1 1 auto !important;padding:10px 6px !important}
+.nx-seg button{flex:0 0 auto;padding:10px 15px;font-size:15px;line-height:1.1;white-space:nowrap}
 .nx-err{margin:10px 0 0;color:#FF8A80;font-size:13px;font-weight:600}
 .anim-dlg .ex-own{margin-bottom:10px}
 :root[data-theme="dark"] .exl-thumb{background:radial-gradient(120% 120% at 30% 0%, rgba(255,255,255,.12), rgba(255,255,255,.04));border-color:rgba(255,255,255,.1)}
@@ -1000,7 +1003,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 98</span><span id="ver-label">Version 9.6</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 99</span><span id="ver-label">Version 9.7</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1190,7 +1193,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 98;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 99;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1848,7 +1851,7 @@ input[type=date]{width:100%;display:block}
     const draw = () => { bg.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="nx-t"><h2 id="nx-t">Neue Übung</h2>
       <input id="nx-name" type="text" placeholder="z. B. Beinpresse" autocomplete="off" value="${esc(bg._v || '')}">
       <p class="dlg-sub" style="margin:12px 0 8px">Trainingstag</p>
-      <div class="seg nx-seg">${cats.map(c => `<button type="button" data-cat="${esc(c)}" class="${c === cat ? 'def' : ''}">${c === 'Eigene' ? 'Sonstige' : esc(c)}</button>`).join('')}</div>
+      <div class="seg nx-seg nx-day">${cats.map(c => `<button type="button" data-cat="${esc(c)}" class="${c === cat ? 'def' : ''}">${c === 'Eigene' ? 'Sonstige' : esc(c)}</button>`).join('')}</div>
       <p class="dlg-sub" style="margin:12px 0 8px">Muskelgruppe</p>
       <div class="seg nx-seg nx-grp">${groupsFor(cat).map(g => `<button type="button" data-grp="${esc(g)}" class="${g === curGrp() ? 'def' : ''}">${esc(g)}</button>`).join('')}</div>
       <p class="nx-err" hidden></p>
