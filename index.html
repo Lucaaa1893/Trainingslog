@@ -830,6 +830,17 @@ input[type=date]{width:100%;display:block}
 @keyframes hlspin{to{transform:rotate(360deg)}}
 .hl-tile.none b{color:var(--muted);font-weight:500}
 .hl-key-row{display:flex;gap:8px}
+.hl-btns{display:flex;gap:8px;margin-bottom:8px}
+.hl-btns > *{flex:1 1 0;margin:0;min-width:0}
+.hl-codebox summary{font-size:13px;color:var(--muted);cursor:pointer;padding:6px 2px;list-style:none}
+.hl-codebox summary::before{content:'› ';display:inline-block;transition:transform .2s}
+.hl-codebox[open] summary::before{transform:rotate(90deg)}
+.hl-codebox .hl-key-row{margin-top:6px}
+.hg{max-height:86vh;overflow-y:auto}
+.hg-steps{margin:10px 0 0;padding-left:20px;font-size:14px;line-height:1.45;color:#fff}
+.hg-steps li{margin-bottom:10px}
+.hg-steps pre{font:12px/1.5 var(--f-mono);background:rgba(0,0,0,.25);border-radius:12px;padding:8px 10px;margin:6px 0;white-space:pre-wrap}
+.hg-get{display:block;text-align:center;text-decoration:none;margin-top:6px}
 .hl-key-row input{flex:1;font-family:var(--f-mono);letter-spacing:.04em}
 .hl-key-row .btn{width:auto;margin:0;padding:0 18px}
 .hl-head .hl-sync{width:40px;height:40px;padding:0;font-size:18px;display:grid;place-items:center}
@@ -989,7 +1000,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 93</span><span id="ver-label">Version 9.1</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 94</span><span id="ver-label">Version 9.2</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1169,7 +1180,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 93;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 94;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1903,7 +1914,10 @@ input[type=date]{width:100%;display:block}
     const H = data.health || {}, dates = Object.keys(H).sort();
     const head = `<div class="hl-head"><h2>Körper & Erholung</h2>${data.healthKey ? `<button type="button" class="ghost alt hl-sync${hSyncing ? ' spin' : ''}" aria-label="Jetzt abgleichen">↻</button>` : ''}</div>` +
       (data.healthKey && hMsg ? `<p class="hl-msg${hMsgErr ? ' err' : ''}">${hMsg}</p>` : '') +
-      (data.healthKey ? '' : `<div class="hl-key"><p class="muted small" style="margin:0 0 8px">Einmal den Code eingeben – danach kommen deine Health-Werte jeden Abend automatisch.</p><div class="hl-key-row"><input id="hl-code" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="xxxx-xxxx-xxxx-xxxx"><button type="button" class="btn hl-go">OK</button></div>${hSyncInfo ? `<p class="nx-err" style="color:var(--bad,#E2362C)">${hSyncInfo}</p>` : ''}</div>`);
+      (data.healthKey ? '' : `<div class="hl-key">${dates.length ? '' : '<p class="muted small" style="margin:0 0 10px">Gewicht, Schlaf, Schritte & Co. aus Apple Health – mit einem Kurzbefehl auf deinem iPhone, ganz ohne Konto.</p>'}
+        ${hMsg ? `<p class="hl-msg${hMsgErr ? ' err' : ''}">${hMsg}</p>` : ''}
+        <div class="row hl-btns"><button type="button" class="btn hl-paste">Werte einfügen</button><button type="button" class="ghost alt hl-guide">${dates.length ? 'Anleitung' : 'So geht\'s'}</button></div>
+        <details class="hl-codebox"><summary>Ich habe einen Abgleich-Code</summary><div class="hl-key-row"><input id="hl-code" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="xxxx-xxxx-xxxx-xxxx"><button type="button" class="btn hl-go">OK</button></div>${hSyncInfo ? `<p class="nx-err" style="color:var(--bad,#E2362C)">${hSyncInfo}</p>` : ''}</details></div>`);
     if (!dates.length){
       $('#health').innerHTML = `<div class="card hl">${head}${data.healthKey ? '<p class="muted small" style="margin:6px 0 0">Noch keine Werte – die ersten kommen nach dem nächsten Abend-Export.</p>' : ''}</div>`;
       return;
@@ -1944,11 +1958,15 @@ input[type=date]{width:100%;display:block}
       renderHealth(); return; }
     if (e.target.closest('.hl-go')){ const c = ($('#hl-code').value || '').trim().toLowerCase(); if (!c) return;
       const ok = await syncHealth(c, true); renderHealth(); if (ok) say('Verbunden – Health-Werte kommen jetzt automatisch.'); return; }
-    if (!e.target.closest('.hl-paste')) return;
+    if (e.target.closest('.hl-guide')){ healthGuide(); return; }
+    if (e.target.closest('.hl-paste')) pasteHealth();
+  });
+  async function pasteHealth(after){
+    const done = d => { hMsg = `Werte vom ${fmtDate(d)} übernommen ✓`; hMsgErr = false; if (d && /^\d{4}-/.test(d)){ calSel = d; calMonth = new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, 1); } if (!$('#view-prog').hidden) renderProgress(); else renderHealth(); if (after) after(); };
     let txt = '';
     try { txt = await navigator.clipboard.readText(); } catch(_){}
     const d = txt && addHealth(txt);
-    if (d){ renderHealth(); say(`Health-Werte vom ${fmtDate(d)} übernommen.`); return; }
+    if (d){ done(d); return; }
     // Fallback: Text von Hand einfügen
     const bg = document.createElement('div'); bg.className = 'dlg-bg';
     bg.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="hp-t"><h2 id="hp-t">Health-Werte einfügen</h2>
@@ -1961,9 +1979,35 @@ input[type=date]{width:100%;display:block}
     bg.querySelector('.dlg-cancel').addEventListener('click', close);
     bg.querySelector('.hp-ok').addEventListener('click', () => { const d2 = addHealth(bg.querySelector('#hp-txt').value);
       if (!d2){ const er = bg.querySelector('.nx-err'); er.hidden = false; er.textContent = 'Keine Werte gefunden.'; return; }
-      close(); renderHealth(); say(`Health-Werte vom ${fmtDate(d2)} übernommen.`); });
+      close(); done(d2); });
     setTimeout(() => bg.querySelector('#hp-txt').focus(), 50);
-  });
+  }
+  const SHORTCUT_URL = '';   // iCloud-Link zum fertigen Kurzbefehl (falls vorhanden)
+  function healthGuide(){
+    const bg = document.createElement('div'); bg.className = 'dlg-bg';
+    bg.innerHTML = `<div class="dlg hg" role="dialog" aria-modal="true" aria-labelledby="hg-t"><h2 id="hg-t">Health-Werte in die App holen</h2>
+      <p class="dlg-sub">Ein Kurzbefehl liest deine Werte aus Apple Health und kopiert sie. In der App tippst du dann auf „Werte einfügen“.</p>
+      ${SHORTCUT_URL ? `<a class="btn hg-get" href="${SHORTCUT_URL}" target="_blank" rel="noopener">Fertigen Kurzbefehl laden</a><p class="dlg-sub" style="margin-top:8px">Beim ersten Start „Erlauben“ für Health tippen. Fertig – weiter bei Schritt 4.</p>` : ''}
+      <ol class="hg-steps">
+        <li><b>Kurzbefehle-App → +</b>. Aktion <b>„Health-Messungen suchen“</b> für jeden Wert: Gewicht, Körperfettanteil, Magere Körpermasse, Body-Mass-Index, Ruheherzfrequenz, Herzfrequenzvariabilität – jeweils <i>Sortieren: Startdatum, Neueste zuerst, Beschränken: 1</i>.</li>
+        <li><b>Schritte</b> und <b>Aktivitätsenergie</b>: <i>Startdatum ist heute, Gruppieren nach Tag</i>. <b>Schlaf</b>: <i>Wert ist In Bed, letzte 2 Tage, Neueste zuerst, 1</i> → „Details abrufen: Dauer“ → „Statistiken: Summe“.</li>
+        <li>Aktion <b>„Text“</b> mit genau diesen Zeilen, hinter jedem Doppelpunkt den passenden Wert als Variable:<pre>Datum: [Aktuelles Datum, ISO 8601]
+Gewicht:
+Körperfett:
+Muskelmasse:
+BMI:
+Schritte:
+Aktive Kalorien:
+Ruhepuls:
+HRV:
+Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
+        <li>Kurzbefehl ausführen (oder per <b>Automation</b> z. B. täglich 21:30), dann hier auf <b>„Werte einfügen“</b> tippen und das Einfügen erlauben.</li>
+      </ol>
+      <p class="dlg-sub" style="margin-top:8px">Alles bleibt auf deinem iPhone. Fehlt ein Wert (z. B. keine Waage), bleibt die Zeile einfach leer.</p>
+      <div class="dlg-btns" style="grid-template-columns:1fr"><button type="button" class="dlg-ok">Verstanden</button></div></div>`;
+    document.body.append(bg);
+    bg.addEventListener('click', ev => { if (ev.target === bg || ev.target.closest('.dlg-ok')) bg.remove(); });
+  }
   const lockSync = () => window.lockSync && window.lockSync();
   // ---- editor ----
   const MOODS = { 1: '😫', 2: '😕', 3: '😐', 4: '🙂', 5: '💪' };
@@ -3008,8 +3052,9 @@ input[type=date]{width:100%;display:block}
     $('#set-health').innerHTML = data.healthKey
       ? `<p class="muted small" style="margin:0 0 10px">Verbunden · ${Object.keys(data.health || {}).length} Tage gespeichert${data.healthSync ? ' · zuletzt abgeglichen ' + new Date(data.healthSync).toLocaleString('de-DE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : ''}</p>
          <div class="row"><button type="button" class="ghost" id="set-h-sync">Jetzt abgleichen</button><button type="button" class="ghost alt clr" id="set-h-off">Code entfernen</button></div>`
-      : `<p class="muted small" style="margin:0 0 10px">Nicht verbunden. Code eingeben, damit die Werte jeden Abend automatisch kommen.</p>
-         <div class="hl-key-row"><input id="set-h-code" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="xxxx-xxxx-xxxx-xxxx"><button type="button" class="btn" id="set-h-go">OK</button></div>`;
+      : `<p class="muted small" style="margin:0 0 10px">${Object.keys(data.health || {}).length} Tage gespeichert. Werte kommen über einen Kurzbefehl und „Werte einfügen“.</p>
+         <div class="row"><button type="button" class="ghost" id="set-h-paste">Werte einfügen</button><button type="button" class="ghost alt" id="set-h-guide">Anleitung</button></div>
+         <details class="hl-codebox"><summary>Ich habe einen Abgleich-Code</summary><div class="hl-key-row"><input id="set-h-code" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="xxxx-xxxx-xxxx-xxxx"><button type="button" class="btn" id="set-h-go">OK</button></div></details>`;
   }
   function openSettings(){ renderSettings(); applyTheme(theme); $('#settings').hidden = false; $('#settings').scrollTop = 0; lockSync(); }
   function closeSettings(){ $('#settings').hidden = true; lockSync(); renderMeta(); if (!$('#view-prog').hidden) renderProgress(); }
@@ -3022,6 +3067,8 @@ input[type=date]{width:100%;display:block}
     const dr = e.target.closest('[data-dren]'); if (dr){ renameDay(dr.dataset.dren); return; }
     const dd = e.target.closest('[data-ddel]'); if (dd){ deleteDay(dd.dataset.ddel); return; }
     if (e.target.closest('#set-h-sync')){ e.target.textContent = 'Gleiche ab …'; const ok = await syncHealth(null, false); renderSettings(); if (!ok) $('#set-health').insertAdjacentHTML('beforeend', `<p class="nx-err" style="color:var(--bad,#E2362C)">${hSyncInfo || 'Abgleich nicht möglich.'}</p>`); return; }
+    if (e.target.closest('#set-h-paste')){ pasteHealth(() => { renderSettings(); $('#set-health').insertAdjacentHTML('afterbegin', `<p class="hl-msg">${hMsg}</p>`); }); return; }
+    if (e.target.closest('#set-h-guide')){ healthGuide(); return; }
     if (e.target.closest('#set-h-off')){ delete data.healthKey; persist(); renderSettings(); return; }
     if (e.target.closest('#set-h-go')){ const c = ($('#set-h-code').value || '').trim().toLowerCase(); if (!c) return; const ok = await syncHealth(c, false); renderSettings(); if (!ok) $('#set-health').insertAdjacentHTML('beforeend', `<p class="nx-err" style="color:var(--bad,#E2362C)">${hSyncInfo}</p>`); return; }
   });
