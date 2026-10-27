@@ -544,9 +544,14 @@ input[type=date]{width:100%;display:block}
 .timer{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:8px 14px;border-radius:999px;background:rgba(47,123,245,.12);color:var(--accent-text);font:700 15px/1 var(--f-body);font-variant-numeric:tabular-nums}
 .timer .dotlive{width:8px;height:8px;border-radius:50%;background:var(--bad);box-shadow:0 0 0 3px rgba(226,54,44,.18);animation:blink 1.4s ease-in-out infinite}
 @keyframes blink{50%{opacity:.35}}
-.set.warm .kind-btn{color:#fff;border-color:rgba(255,255,255,.5);background:var(--shine), linear-gradient(180deg,#A3A9B5,#7C8494)}
-.set.warm .num{opacity:.6}
-.chip.warm{opacity:.6;font-style:italic}
+.set.warm .kind-btn{color:#fff;border-color:rgba(255,255,255,.5);background:var(--shine), linear-gradient(180deg,#2DD4DE,#0EA5B2)}
+.set.warm .num{color:#0EA5B2;border-color:#14B8C4;font-weight:700}
+.set.warm{padding:5px;margin-left:-5px;margin-right:-5px;border-radius:18px;background:rgba(20,184,196,.12);box-shadow:inset 0 0 0 1px rgba(20,184,196,.25)}
+.set.warm input::placeholder{color:rgba(14,165,178,.55)}
+:root[data-theme="dark"] .set.warm{background:rgba(20,184,196,.14)}
+:root[data-theme="dark"] .set.warm .num{color:#2DD4DE}
+.chip.warm{color:#0B8A95;border-color:rgba(20,184,196,.5);background:rgba(20,184,196,.12)}
+:root[data-theme="dark"] .chip.warm{color:#5EE3EA}
 .mrow{display:grid;grid-template-columns:78px 1fr 28px;gap:10px;align-items:center;margin:9px 0}
 .mname{font-size:14px;font-weight:600}
 .mval{font-size:14px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
@@ -983,7 +988,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 89</span><span id="ver-label">Version 8.7</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 90</span><span id="ver-label">Version 8.8</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1094,10 +1099,14 @@ input[type=date]{width:100%;display:block}
     return d.exercises.every(e => e.sets.every(s => s.reps === '' && s.kg === '' && s.kind !== 'drop'));
   }
   // Last logged values for the same exercise and set, shown as placeholder.
-  function lastSet(name, j){
+  // Letzter Wert passend zur Satzart: Aufwärmsatz ↔ Aufwärmsatz, Arbeitssatz Nr. n ↔ Arbeitssatz Nr. n
+  function lastSet(name, j, sets){
     for (let k = data.sessions.length - 1; k >= 0; k--){
       const e = data.sessions[k].exercises.find(x => x.name === name);
-      if (e) return e.sets[j] || null;
+      if (!e) continue;
+      if (!sets) return e.sets[j] || null;
+      const warm = sets[j] && sets[j].kind === 'warm', n = sets.slice(0, j).filter(x => (x.kind === 'warm') === warm).length;
+      return e.sets.filter(x => (x.kind === 'warm') === warm)[n] || null;
     }
     return null;
   }
@@ -1116,9 +1125,12 @@ input[type=date]{width:100%;display:block}
   function applyLast(ex){
     const hit = lastEx(ex.name); if (!hit) return null;
     const L = hit.ex;
-    while (ex.sets.length < L.sets.length) ex.sets.push({ reps:'', kg:'' });
-    L.sets.forEach((ls, j) => {
-      const s = ex.sets[j];
+    const lw = L.sets.filter(x => x.kind === 'warm'), lk = L.sets.filter(x => x.kind !== 'warm');
+    while (ex.sets.filter(x => x.kind === 'warm').length < lw.length) ex.sets.unshift({ reps:'', kg:'', kind:'warm' });
+    while (ex.sets.filter(x => x.kind !== 'warm').length < lk.length) ex.sets.push({ reps:'', kg:'' });
+    const dw = ex.sets.filter(x => x.kind === 'warm'), dk = ex.sets.filter(x => x.kind !== 'warm');
+    [...lw.map((ls, n) => [ls, dw[n]]), ...lk.map((ls, n) => [ls, dk[n]])].forEach(([ls, s]) => {
+      if (!s) return;
       if (s.reps === '' || s.reps == null) s.reps = ls.reps ?? '';
       if (s.kg === '' || s.kg == null) s.kg = ls.kg ?? '';
       if (ls.kind === 'drop' && s.kind !== 'drop'){ s.kind = 'drop'; s.drops = dropsOf(ls).map(d => ({ reps: d.reps ?? '', kg: d.kg ?? '' })); }
@@ -1151,7 +1163,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 89;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 90;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1298,7 +1310,7 @@ input[type=date]{width:100%;display:block}
   addEventListener('resize', () => closeMenu(true));
   const typeOpts = () => [...days().map(d => ({ value:d.name, label:d.name, color:d.color })), { value:'Sonstiges', label:'Sonstiges', color:'#9AA3B2' }, { value:'__new', label:'+ Neuer Trainingstag' }];
   const hasData = e => e.note || e.sets.some(x => x.reps !== '' || x.kg !== '' || x.kind === 'drop');
-  const KIND_OPTS = [{value:'',label:'Normal'},{value:'warm',label:'Aufwärmsatz',color:'#8E8E93'},{value:'drop',label:'Dropsatz',color:'#F08A00'}];
+  const KIND_OPTS = [{value:'',label:'Normal'},{value:'warm',label:'Aufwärmsatz',color:'#14B8C4'},{value:'drop',label:'Dropsatz',color:'#F08A00'}];
   function setType(v){
     if (v === '__new'){ openNewDay(); return; }
     const old = data.draft.exercises;
@@ -2011,9 +2023,9 @@ input[type=date]{width:100%;display:block}
         <button class="ex-sum" type="button" data-act="reopen">✓ ${e.sets.length} ${e.sets.length===1?'Satz':'Sätze'} erledigt · antippen zum Öffnen</button>
         <input class="txt note" data-f="note" placeholder="Maschineneinstellung, z. B. Sitz Stufe 4" value="${esc(e.note)}" aria-label="Maschineneinstellung">
         <div class="sets-head" title="Graue Zahlen zeigen die Werte vom letzten Mal"><span>#</span><span>Wdh</span><span>kg</span><span>Art</span><span></span></div>
-        ${e.sets.map((s, j) => { const L = lastSet(e.name, j); return `
+        ${e.sets.map((s, j) => { const L = lastSet(e.name, j, e.sets), wn = e.sets.slice(0, j + 1).filter(x => x.kind !== 'warm').length; return `
           <div class="set${s.kind==='drop'?' drop':''}${s.kind==='warm'?' warm':''}${s.done?' isdone':''}">
-            <button class="num chk${s.done?' on':''}" type="button" data-act="done" data-j="${j}" aria-pressed="${!!s.done}" aria-label="Satz ${j+1} ${s.done?'erledigt':'abhaken'}">${s.done?'✓':j+1}</button>
+            <button class="num chk${s.done?' on':''}" type="button" data-act="done" data-j="${j}" aria-pressed="${!!s.done}" aria-label="${s.kind==='warm'?'Aufwärmsatz':'Satz '+wn} ${s.done?'erledigt':'abhaken'}">${s.done?'✓':s.kind==='warm'?'A':wn}</button>
             <input type="number" inputmode="numeric" min="0" step="1" data-f="reps" data-j="${j}" value="${esc(s.reps)}" placeholder="${L && L.reps != null ? L.reps : ''}" aria-label="Wiederholungen, Satz ${j+1}">
             <input type="number" inputmode="decimal" min="0" step="0.5" data-f="kg" data-j="${j}" value="${esc(s.kg)}" placeholder="${L && L.kg != null ? fmtKg(L.kg) : ''}" aria-label="Gewicht in kg, Satz ${j+1}">
             <button class="kind-btn" type="button" data-act="kind" data-j="${j}" aria-haspopup="menu" aria-expanded="false" aria-label="Satzart, Satz ${j+1}: ${KIND_LABEL[s.kind||'']}">${KIND_LABEL[s.kind||'']}${CHEV}</button>
