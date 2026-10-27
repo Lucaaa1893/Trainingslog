@@ -1000,7 +1000,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 94</span><span id="ver-label">Version 9.2</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 95</span><span id="ver-label">Version 9.3</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1066,6 +1066,10 @@ input[type=date]{width:100%;display:block}
   };
   // umbenannte feste Übungen (Original-Name → eigener Name)
   const tplName = n => (data.renames && data.renames[n]) || n;
+  // Übungs-Bibliothek: erscheint in Auswahl und Übungen-Tab, aber nicht automatisch im Tagesplan
+  const LIBRARY = {"Push": {"Brust": ["Bankdrücken mit Langhantel", "Schrägbankdrücken mit Langhantel", "Negativbankdrücken", "Bankdrücken mit Kurzhanteln", "Fliegende mit Kurzhanteln", "Cable Crossover am Kabelturm", "Brustpresse schräg an der Maschine", "Liegestütze", "Dips (Brust)"], "Schultern": ["Schulterdrücken mit Langhantel (Military Press)", "Arnold Press", "Schulterdrücken an der Maschine", "Seitheben mit Kurzhanteln", "Seitheben am Kabelzug", "Frontheben mit Kurzhanteln"], "Trizeps": ["Dips am Barren", "Trizepsdrücken am Kabel mit Seil", "French Press mit SZ-Stange", "Enges Bankdrücken", "Trizeps-Kickbacks mit Kurzhantel", "Trizepsdrücken über Kopf mit Kurzhantel"]}, "Pull": {"Rücken": ["Klimmzüge", "Klimmzüge im Untergriff (Chin-ups)", "Latziehen eng", "Kabelrudern sitzend", "Langhantelrudern vorgebeugt", "Kurzhantelrudern einarmig", "Rudern an der Maschine", "Kreuzheben", "Überzüge am Kabel (gestreckte Arme)"], "Schultern": ["Face Pulls am Kabel", "Reverse Flys mit Kurzhanteln", "Shrugs mit Kurzhanteln"], "Bizeps": ["Langhantelcurls", "Kurzhantelcurls", "Hammercurls", "SZ-Curls", "Konzentrationscurls", "Kabelcurls mit Stange", "Scottcurls mit SZ-Stange"]}, "Leg": {"Oberschenkel vorne": ["Frontkniebeuge", "Goblet Squat", "Hackenschmidt-Kniebeuge", "Bulgarian Split Squats", "Ausfallschritte", "Step-ups"], "Oberschenkel hinten": ["Rumänisches Kreuzheben", "Beinbeuger sitzend", "Nordic Curls"], "Hüfte": ["Hip Thrust", "Glute Bridge", "Po-Kickbacks am Kabel"], "Waden": ["Wadenheben stehend"]}, "Eigene": {"Bauch": ["Crunches", "Crunches am Kabel", "Plank", "Beinheben hängend", "Russian Twists", "Ab-Roller"]}};
+  const LIB_G = {}, LIB_C = {};
+  Object.entries(LIBRARY).forEach(([c, gs]) => Object.entries(gs).forEach(([g, ns]) => ns.forEach(n => { LIB_G[n] = g; LIB_C[n] = c; })));
   function lastNote(name){
     for (let k = data.sessions.length - 1; k >= 0; k--){
       const e = data.sessions[k].exercises.find(x => x.name === name);
@@ -1180,7 +1184,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 94;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 95;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1579,6 +1583,8 @@ input[type=date]{width:100%;display:block}
         eq:[{seg:[[98,30],[98,94]],w:3},{cable:[[96,90],'W']},{vbar:'W'}], bones:BONES_SIDE },
       squat: { A:{H:[56,10],N:[55,22],P:[54,54],K:[58,74],F:[54,94],E:[46,30],W:[53,20]}, B:{H:[66,32],N:[60,42],P:[38,66],K:[62,70],E:[52,50],W:[58,40]},
         eq:[{bar:'W',w:34}], bones:BONES_SIDE },
+      crunch: { A:{H:[26,80],N:[34,82],P:[62,86],K:[78,64],F:[96,88],E:[42,74],W:[32,72]}, B:{H:[40,60],N:[44,68],E:[50,62],W:[40,58]},
+        eq:[{rect:[10,89,100,5]}], bones:BONES_SIDE },
       legpress: { A:{H:[18,50],N:[26,56],P:[44,78],K:[52,50],F:[70,54],E:[38,68],W:[46,74]}, B:{K:[62,57],F:[82,38]},
         eq:[{seg:[[12,46],[44,84]],w:6},{seg:[[44,84],[44,94]]},{seg:[[56,86],[106,36]],w:2},{perp:'F',d:[7,7]}], bones:BONES_SIDE },
       legcurl: { A:{H:[16,50],N:[26,56],P:[58,58],K:[82,58],F:[104,58],E:[24,68],W:[16,70]}, B:{F:[92,37]},
@@ -1605,7 +1611,12 @@ input[type=date]{width:100%;display:block}
     if (/beinpresse|leg ?press/.test(n)) return 'legpress';
     if (/schrägbank|schraegbank|incline/.test(n)) return 'incline';
     if (/reverse|hintere schulter|face ?pull/.test(n)) return 'revfly';
-    if (/butterfl|\bfly|flys/.test(n)) return 'fly';
+    if (/butterfl|\bfly|flys|fliegende|crossover/.test(n)) return 'fly';
+    if (/crunch|plank|twist|ab-roller|beinheben|bauch/.test(n)) return 'crunch';
+    if (/arnold/.test(n)) return 'shoulderpress';
+    if (/überzüge|ueberzuege|pullover/.test(n)) return 'latpull';
+    if (/shrug/.test(n)) return 'lateral';
+    if (/step-up|step up/.test(n)) return 'squat';
     if (/seitheben|lateral raise/.test(n)) return 'lateral';
     if (/schulterdrück|schulterdrueck|military|overhead press/.test(n)) return 'shoulderpress';
     if (/trizeps/.test(n) && /über kopf|ueber kopf|overhead/.test(n) || /french/.test(n)) return 'tri_oh';
@@ -2225,6 +2236,7 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
     TEMPLATES.Push.forEach(n => m.set(tplName(n), 'Push'));
     TEMPLATES.Pull.forEach(n => m.set(tplName(n), 'Pull'));
     TEMPLATES.Leg.forEach(n => m.set(tplName(n), 'Leg'));
+    Object.keys(LIB_C).forEach(n => { if (!m.has(n)) m.set(n, LIB_C[n]); });
     (data.custom || []).forEach(c => {
       const n = typeof c === 'string' ? c : c.name, cat = typeof c === 'string' ? 'Eigene' : (c.cat || 'Eigene');
       if (n && !m.has(n)) m.set(n, cat);
@@ -2861,6 +2873,7 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
   // feinere Gruppen für Übungsauswahl und Übungsliste: Beine aufgeteilt
   const GROUP_ORDER = ['Brust', 'Rücken', 'Schultern', 'Bizeps', 'Trizeps', 'Oberschenkel vorne', 'Oberschenkel hinten', 'Waden', 'Hüfte', 'Beine', 'Bauch', 'Sonstige'];
   function groupOf(name){
+    if (LIB_G[name]) return LIB_G[name];
     const m = muscleOf(name); if (m !== 'Beine') return m;
     const n = (name || '').toLowerCase();
     if (/wade/.test(n)) return 'Waden';
@@ -2869,6 +2882,7 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
     return 'Oberschenkel vorne';
   }
   function muscleOf(name){
+    const lg = LIB_G[name]; if (lg) return /Oberschenkel|Hüfte|Waden/.test(lg) ? 'Beine' : lg;
     const n = (name || '').toLowerCase();
     if (/reverse|face ?pull|hintere schulter/.test(n)) return 'Schultern';
     if (/trizeps|dips|french|pushdown/.test(n)) return 'Trizeps';
