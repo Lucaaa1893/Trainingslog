@@ -988,7 +988,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 90</span><span id="ver-label">Version 8.8</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 91</span><span id="ver-label">Version 8.9</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1163,7 +1163,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 90;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 91;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1403,6 +1403,11 @@ input[type=date]{width:100%;display:block}
     const set = data.draft.exercises[i].sets[j];
     set.kind = v;
     if (v === 'drop' && !(set.drops && set.drops.length)) set.drops = [{ reps:'', kg:'' }];
+    // Aufwärmsätze immer ganz oben (hinter evtl. vorhandenen Aufwärmsätzen)
+    const sets = data.draft.exercises[i].sets;
+    if (v === 'warm'){ sets.splice(j, 1); const k = sets.findIndex(x => x.kind !== 'warm'); sets.splice(k < 0 ? sets.length : k, 0, set); }
+    else if (j < sets.length - 1 && sets.slice(j + 1).some(x => x.kind === 'warm')){ sets.splice(j, 1); const k = sets.findIndex(x => x.kind !== 'warm'); sets.splice(k < 0 ? sets.length : k, 0, set); }
+    j = sets.indexOf(set);
     saveDraft(); renderEditor();
     const first = v === 'drop' && document.querySelector(`.ex[data-i="${i}"] [data-f="dropReps"][data-j="${j}"]`);
     if (first) first.focus();
