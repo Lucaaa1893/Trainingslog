@@ -1000,7 +1000,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 97</span><span id="ver-label">Version 9.5</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 98</span><span id="ver-label">Version 9.6</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1190,7 +1190,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 97;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 98;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1722,10 +1722,12 @@ input[type=date]{width:100%;display:block}
         <div class="anim-acts"><label class="ghost alt anim-pick">${exImg.has(n) ? 'Anderes Bild/GIF' : 'Eigenes Bild/GIF wählen'}<input type="file" accept="image/*" hidden></label>${exImg.has(n) ? '<button type="button" class="ghost alt clr anim-rm">Entfernen</button>' : ''}</div>
         ${exImg.has(n) ? (aligning ? '<div class="size-row"><button type="button" class="sz" data-sz="-1" aria-label="Kleiner">−</button><span>Größe</span><button type="button" class="sz" data-sz="1" aria-label="Größer">+</button></div><p class="align-hint">Mit einem Finger verschieben, mit zwei Fingern größer/kleiner ziehen, dann „Fertig“.</p><button type="button" class="ghost align-done">Fertig</button>' : '') : ''}
         <p class="dlg-sub anim-note">Wird nur auf diesem Gerät gespeichert.</p>
+        ${isCustomEx(n) ? `<p class="dlg-sub" style="margin:12px 0 6px">Muskelgruppe</p><select class="ex-grp" style="width:100%;margin-bottom:10px">${groupsFor(allExercises().get(n)).map(g => `<option${g === groupOf(n) ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>` : ''}
         <div class="anim-acts ex-own"><button type="button" class="ghost alt ex-ren">Namen ändern</button>${isCustomEx(n) ? '<button type="button" class="ghost alt clr ex-del">Übung löschen</button>' : ''}</div>
         <div class="dlg-btns"><button type="button" class="dlg-ok">Schließen</button></div></div>`;
         bg.querySelector('input[type=file]').addEventListener('change', async ev => { const f = ev.target.files[0]; if (!f) return; try { await setImg(n, f); data.imgFit = data.imgFit || {}; delete data.imgFit[n]; persist(); aligning = true; } catch (_){ say('Bild konnte nicht gespeichert werden.', true); } draw(); refreshEx(); });
         const ad = bg.querySelector('.align-done'); if (ad) ad.addEventListener('click', () => { aligning = false; draw(); refreshEx(); });
+        const xg = bg.querySelector('.ex-grp'); if (xg) xg.addEventListener('change', () => { const c = data.custom.find(x => typeof x === 'object' && x.name === n); if (c){ c.group = xg.value; persist(); refreshEx(); } });
         const xr = bg.querySelector('.ex-ren'); if (xr) xr.addEventListener('click', () => renameDialog(n, nn => { bg.remove(); refreshEx(); openExDialog(nn); }));
         const xd = bg.querySelector('.ex-del'); if (xd) xd.addEventListener('click', () => {
           data.custom = (data.custom || []).filter(c => (typeof c === 'string' ? c : c.name) !== n); persist(); bg.remove(); refreshEx(); });
@@ -1829,6 +1831,7 @@ input[type=date]{width:100%;display:block}
       names.forEach(n => (groups[groupOf(n)] = groups[groupOf(n)] || []).push(n));
       GROUP_ORDER.forEach(m => {
         if (!groups[m]) return;
+        groups[m].sort((a, b) => a.localeCompare(b, 'de'));
         html += `<div class="card exl-group"><div class="p-sub">${m}</div>` + groups[m].map(n => { const st = stats[n];
           return `<button type="button" class="exl-row" data-exl="${esc(n)}"><span class="exl-thumb">${exTile(n)}</span><span class="exl-txt"><b>${esc(n)}</b><small>${st ? `${st.n}× trainiert${st.best && st.best.set && st.best.set.kg != null ? ` · Rekord ${kg1(st.best.set.kg)} kg × ${st.best.set.reps}` : ''}` : 'noch nicht trainiert'}${isCustomEx(n) ? ' · eigene' : ''}</small></span><span class="exl-go">›</span></button>`; }).join('') + '</div>';
       });
@@ -1839,23 +1842,27 @@ input[type=date]{width:100%;display:block}
   $('#ex-search').addEventListener('input', renderExList);
   $('#ex-new').addEventListener('click', () => {
     const cats = [...days().map(d => d.name), 'Eigene'];
-    let cat = days().some(d => d.name === data.draft.type) ? data.draft.type : cats[0];
+    let cat = days().some(d => d.name === data.draft.type) ? data.draft.type : cats[0], grp = null;
     const bg = document.createElement('div'); bg.className = 'dlg-bg';
+    const curGrp = () => (grp && groupsFor(cat).includes(grp)) ? grp : guessGroup(bg._v || '', cat);
     const draw = () => { bg.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="nx-t"><h2 id="nx-t">Neue Übung</h2>
       <input id="nx-name" type="text" placeholder="z. B. Beinpresse" autocomplete="off" value="${esc(bg._v || '')}">
       <p class="dlg-sub" style="margin:12px 0 8px">Trainingstag</p>
       <div class="seg nx-seg">${cats.map(c => `<button type="button" data-cat="${esc(c)}" class="${c === cat ? 'def' : ''}">${c === 'Eigene' ? 'Sonstige' : esc(c)}</button>`).join('')}</div>
+      <p class="dlg-sub" style="margin:12px 0 8px">Muskelgruppe</p>
+      <div class="seg nx-seg nx-grp">${groupsFor(cat).map(g => `<button type="button" data-grp="${esc(g)}" class="${g === curGrp() ? 'def' : ''}">${esc(g)}</button>`).join('')}</div>
       <p class="nx-err" hidden></p>
       <div class="dlg-btns" style="margin-top:14px"><button type="button" class="dlg-cancel">Abbrechen</button><button type="button" class="dlg-ok nx-ok">Anlegen</button></div></div>`;
-      const inp = bg.querySelector('#nx-name'); inp.addEventListener('input', () => { bg._v = inp.value; });
+      const inp = bg.querySelector('#nx-name'); inp.addEventListener('input', () => { bg._v = inp.value; if (!grp){ const g = curGrp(); bg.querySelectorAll('[data-grp]').forEach(b => b.classList.toggle('def', b.dataset.grp === g)); } });
       inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') bg.querySelector('.nx-ok').click(); });
       bg.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => { cat = b.dataset.cat; draw(); }));
+      bg.querySelectorAll('[data-grp]').forEach(b => b.addEventListener('click', () => { grp = b.dataset.grp; draw(); }));
       bg.querySelector('.dlg-cancel').addEventListener('click', () => bg.remove());
       bg.querySelector('.nx-ok').addEventListener('click', () => {
         const n = (bg._v || '').trim(), err = bg.querySelector('.nx-err');
         if (!n){ err.hidden = false; err.textContent = 'Bitte einen Namen eingeben.'; return; }
         if ([...allExercises().keys()].some(x => x.toLowerCase() === n.toLowerCase())){ err.hidden = false; err.textContent = 'Diese Übung gibt es schon.'; return; }
-        data.custom = data.custom || []; data.custom.push({ name: n, cat }); persist(); bg.remove(); renderExList();
+        data.custom = data.custom || []; data.custom.push({ name: n, cat, group: curGrp() }); persist(); bg.remove(); renderExList();
         openExDialog(n);
       });
     };
@@ -2292,6 +2299,7 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
       names.forEach(n => (groups[groupOf(n)] = groups[groupOf(n)] || []).push(n));
       GROUP_ORDER.forEach(m => {
         if (!groups[m]) return;
+        groups[m].sort((a, b) => a.localeCompare(b, 'de'));
         html += `<div class="p-sub">${m}</div>` + groups[m].map(btn).join('');
       });
     });
@@ -2301,7 +2309,7 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
   const defaultCat = () => days().some(d => d.name === data.draft.type) ? data.draft.type : 'Eigene';
   function choose(name, cat){
     name = (name || '').trim(); if (!name) return;
-    if (!allExercises().has(name)) { data.custom = data.custom || []; data.custom.push({ name, cat: cat || defaultCat() }); }
+    if (!allExercises().has(name)) { data.custom = data.custom || []; const c0 = cat || defaultCat(); data.custom.push({ name, cat: c0, group: guessGroup(name, c0) }); }
     let idx;
     if (pickFor === 'new'){
       data.draft.exercises.push({ name, note: lastNote(name), sets: newSets() });
@@ -2880,7 +2888,12 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
   const MUSCLE_ORDER = ['Brust', 'Rücken', 'Schultern', 'Bizeps', 'Trizeps', 'Beine', 'Bauch'];
   // feinere Gruppen für Übungsauswahl und Übungsliste: Beine aufgeteilt
   const GROUP_ORDER = ['Brust', 'Rücken', 'Schultern', 'Bizeps', 'Trizeps', 'Oberschenkel vorne', 'Oberschenkel hinten', 'Waden', 'Hüfte', 'Beine', 'Bauch', 'Sonstige'];
+  // eigene Übungen merken sich ihre Muskelgruppe; ohne Angabe wird sie aus dem Namen erraten
+  const customGroup = name => { const c = (data.custom || []).find(x => typeof x === 'object' && x.name === name); return c && c.group || null; };
+  const groupsFor = cat => cat === 'Push' ? ['Brust', 'Schultern', 'Trizeps'] : cat === 'Pull' ? ['Rücken', 'Schultern', 'Bizeps'] : cat === 'Leg' ? ['Oberschenkel vorne', 'Oberschenkel hinten', 'Hüfte', 'Waden'] : GROUP_ORDER.filter(g => g !== 'Beine');
+  function guessGroup(name, cat){ const list = groupsFor(cat), g = groupOf(name); return list.includes(g) ? g : list[0]; }
   function groupOf(name){
+    const cg = customGroup(name); if (cg) return cg;
     if (LIB_G[name]) return LIB_G[name];
     const m = muscleOf(name); if (m !== 'Beine') return m;
     const n = (name || '').toLowerCase();
@@ -2890,7 +2903,7 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
     return 'Oberschenkel vorne';
   }
   function muscleOf(name){
-    const lg = LIB_G[name]; if (lg) return /Oberschenkel|Hüfte|Waden/.test(lg) ? 'Beine' : lg;
+    const lg = customGroup(name) || LIB_G[name]; if (lg) return /Oberschenkel|Hüfte|Waden/.test(lg) ? 'Beine' : lg;
     const n = (name || '').toLowerCase();
     if (/reverse|face ?pull|hintere schulter/.test(n)) return 'Schultern';
     if (/trizeps|dips|french|pushdown/.test(n)) return 'Trizeps';
