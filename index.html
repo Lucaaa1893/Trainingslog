@@ -822,9 +822,8 @@ input[type=date]{width:100%;display:block}
 .seg-pill{position:absolute;top:4px;bottom:4px;left:0;border-radius:999px;z-index:0;pointer-events:none;will-change:translate,transform,width;background:var(--shine), linear-gradient(180deg,#4B8EFF,#2F7BF5);box-shadow:0 6px 14px -8px rgba(47,123,245,.9), inset 0 1px 1px rgba(255,255,255,.5);transition:scale .4s var(--spring), box-shadow .3s ease}
 .set-seg.grab .seg-pill{scale:1.05 1.12;transition:scale .3s cubic-bezier(.2,.8,.3,1), box-shadow .3s ease;box-shadow:0 10px 22px -8px rgba(47,123,245,.9), inset 0 0 0 1.5px rgba(255,255,255,.7), inset 0 2px 2px rgba(255,255,255,.7)}
 /* Hell/Dunkel: kreisförmig vom angetippten Knopf aus einblenden */
-::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
-::view-transition-new(root){animation:theme-reveal .62s cubic-bezier(.45,0,.2,1)}
-@keyframes theme-reveal{from{clip-path:circle(0 at var(--vt-x,50%) var(--vt-y,50%))}to{clip-path:circle(var(--vt-r,150vmax) at var(--vt-x,50%) var(--vt-y,50%))}}
+/* Hell/Dunkel: kurzes Überblenden in der neuen Grundfarbe */
+.theme-dip{position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:0}
 :root[data-theme="dark"] .set-seg{background:rgba(255,255,255,.07)}
 .set-day{display:flex;align-items:center;gap:10px;padding:10px 2px;border-top:1px solid var(--line2)}
 .set-day:first-child{border-top:0}
@@ -1012,7 +1011,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 100</span><span id="ver-label">Version 9.8</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 101</span><span id="ver-label">Version 9.9</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1202,7 +1201,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 100;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 101;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -3059,12 +3058,22 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
   $('#set-theme').addEventListener('click', e => {
     const b = e.target.closest('[data-th]'); if (!b || b.dataset.th === theme) return;
     theme = b.dataset.th; try { localStorage.setItem('tl-theme', theme); } catch(_){}
-    if (!document.startViewTransition || reduce){ applyTheme(theme); return; }
-    // Kreis wächst vom Knopf aus über den ganzen Bildschirm
-    const r = b.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, de = document.documentElement.style;
-    de.setProperty('--vt-x', cx + 'px'); de.setProperty('--vt-y', cy + 'px');
-    de.setProperty('--vt-r', Math.hypot(Math.max(cx, innerWidth - cx), Math.max(cy, innerHeight - cy)) + 'px');
-    document.startViewTransition(() => applyTheme(theme));
+    if (reduce){ applyTheme(theme); return; }
+    // 1. Pille gleitet rüber  2. kurzes Überblenden in der neuen Farbe – verdeckt den schweren Farbwechsel, damit nichts ruckelt
+    const st = $('#set-theme'), t = theme;
+    st.querySelectorAll('[data-th]').forEach(x => x.classList.toggle('def', x === b)); placePill(st);
+    const pill = st.querySelector('.seg-pill'), wait = pill && pill._anim ? pill._anim.finished.catch(() => {}) : Promise.resolve();
+    wait.then(() => {
+      if (theme !== t) return;
+      const ov = document.createElement('div'); ov.className = 'theme-dip'; ov.style.background = t === 'dark' ? '#0B0D12' : '#E6E9EE';
+      document.body.append(ov);
+      ov.animate([{ opacity:0 }, { opacity:1 }], { duration:140, easing:'ease-in', fill:'forwards' }).finished.then(() => {
+        applyTheme(t);
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          ov.animate([{ opacity:1 }, { opacity:0 }], { duration:260, easing:'ease-out', fill:'forwards' }).finished.then(() => ov.remove());
+        }));
+      });
+    });
   });
   // ---- Wischbare Auswahl (flüssige Glas-Pille) ----
   const segPill = seg => { let p = seg.querySelector('.seg-pill'); if (!p){ p = document.createElement('span'); p.className = 'seg-pill'; seg.prepend(p); } return p; };
@@ -3084,20 +3093,17 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
     if (reduce || !from.w || Math.abs(dist) < 1 && Math.abs(toW - from.w) < 1) return;
     const btns = [...seg.querySelectorAll('button')], [minX, maxX] = segBounds(btns);
     const R = (l, w, sy) => { l = Math.max(minX, l); w = Math.min(maxX - l, w); return { translate: l + 'px 0', transform:`scaleY(${sy})`, width: w + 'px' }; };
-    const right = dist > 0, a = Math.min(Math.abs(dist), 160) / 160, over = 3 + 4 * a;
-    const fromR = from.l + from.w, toR = toL + toW;
-    const k1 = right // gestreckt: vordere Kante fast am Ziel, hintere hängt nach
-      ? R(from.l + (toL - from.l) * .22, (toR - 2) - (from.l + (toL - from.l) * .22), 1 - .1 * a)
-      : R(toL + 2, (fromR + (toR - fromR) * .22) - (toL + 2), 1 - .1 * a);
-    const k2 = right ? R(toL + over, toW, 1 + .05 * a) : R(toL - over, toW, 1 + .05 * a);
-    const k3 = right ? R(toL - over * .3, toW, .99) : R(toL + over * .3, toW, .99);
+    // Pille gleitet als Ganzes, dehnt sich unterwegs nur leicht (max. +40 %) und federt kurz ein
+    const sg = Math.sign(dist), a = Math.min(Math.abs(dist), 240) / 240, over = 2 + 3 * a;
+    const st = Math.min(Math.abs(dist) * .3, Math.max(from.w, toW) * .4), cMid = from.l + from.w / 2 + dist * .55, wMid = (from.w + toW) / 2 + st;
+    const C = (c, w, sy) => R(c - w / 2, w, sy), toC = toL + toW / 2;
     pill._anim = pill.animate([
-      { ...R(from.l, from.w, 1), offset:0, easing:'cubic-bezier(.4,0,.7,.9)' },
-      { ...k1, offset:.38, easing:'cubic-bezier(.2,.6,.35,1)' },
-      { ...k2, offset:.68, easing:'ease-in-out' },
-      { ...k3, offset:.86, easing:'ease-out' },
+      { ...R(from.l, from.w, 1), offset:0, easing:'cubic-bezier(.5,0,.6,1)' },
+      { ...C(cMid, wMid, 1 - .08 * a), offset:.45, easing:'cubic-bezier(.2,.7,.35,1)' },
+      { ...C(toC + sg * over, toW * 1.03, 1 + .04 * a), offset:.75, easing:'ease-in-out' },
+      { ...C(toC - sg * over * .25, toW, 1), offset:.9, easing:'ease-out' },
       { ...R(toL, toW, 1), offset:1 }
-    ], { duration: 380 + 220 * a });
+    ], { duration: 360 + 180 * a });
     pill._anim.onfinish = () => { pill._anim = null; };
   }
   function placePill(seg){
