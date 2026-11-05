@@ -1019,7 +1019,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 103</span><span id="ver-label">Version 10.1</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 104</span><span id="ver-label">Version 10.2</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1211,7 +1211,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 103;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 104;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1628,7 +1628,12 @@ input[type=date]{width:100%;display:block}
         B:{K1:[54,70],F1:[54,93],K2:[66,70],F2:[66,93]}, eq:[{rect:[46,60,28,7]},{padv:'K1',o:[5,0]},{padv:'K2',o:[-5,0]}], bones:BONES_FRONT }
     };
   })();
+  // Animation bleibt beim Umbenennen erhalten (gemerkt unter dem neuen Namen)
   function exAnimKey(name){
+    const fixed = data.animFor && data.animFor[name]; if (fixed && ANIMS[fixed]) return fixed;
+    return exAnimKeyByName(name);
+  }
+  function exAnimKeyByName(name){
     const n = (name || '').toLowerCase();
     if (/wade/.test(n)) return /sitz/.test(n) ? 'calf_seated' : 'calf_press';
     if (/abduk/.test(n)) return 'abductor';
@@ -1810,8 +1815,11 @@ input[type=date]{width:100%;display:block}
     fix(data.draft); fix(data.draft && data.draft.keep);
     if (data.notes && data.notes[oldN] != null){ data.notes[newN] = data.notes[oldN]; delete data.notes[oldN]; }
     if (data.imgFit && data.imgFit[oldN]){ data.imgFit[newN] = data.imgFit[oldN]; delete data.imgFit[oldN]; }
+    const ak = exAnimKey(oldN); data.animFor = data.animFor || {}; delete data.animFor[oldN];
+    if (ak && ak !== exAnimKeyByName(newN)) data.animFor[newN] = ak; else delete data.animFor[newN];
     persist();
     try { const blob = await mediaDo('readonly', st => st.get(oldN)); if (blob){ await setImg(newN, blob); await setImg(oldN, null); } } catch(_){}
+    refreshEx(); // alle Ansichten neu zeichnen, sonst zeigt das Eintragen-Tab noch die alte (gelöschte) Bildadresse → „?“
   }
   function renameDialog(oldN, done){
     const bg = document.createElement('div'); bg.className = 'dlg-bg';
@@ -3251,7 +3259,7 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
       const keys = await mediaDo('readonly', st => st.getAllKeys());
       for (const k of keys || []){ const blob = await mediaDo('readonly', st => st.get(k)); const d = blob && await toData(blob); if (d) images[k] = d; }
     } catch(_){}
-    const json = JSON.stringify({ app:'trainingslog', version:2, exported:new Date().toISOString(), sessions:data.sessions, custom:data.custom, days:data.days, notes:data.notes, imgFit:data.imgFit, renames:data.renames, libRenames:data.libRenames, health:data.health, healthKey:data.healthKey, images }, null, 1);
+    const json = JSON.stringify({ app:'trainingslog', version:2, exported:new Date().toISOString(), sessions:data.sessions, custom:data.custom, days:data.days, notes:data.notes, imgFit:data.imgFit, animFor:data.animFor, renames:data.renames, libRenames:data.libRenames, health:data.health, healthKey:data.healthKey, images }, null, 1);
     const name = 'trainingslog-' + today() + '.json';
     try {
       const file = new File([json], name, { type:'application/json' });
@@ -3279,6 +3287,7 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
       if (obj.healthKey && !data.healthKey) data.healthKey = obj.healthKey;
       if (obj.health) data.health = Object.assign({}, obj.health, data.health || {});
       if (obj.renames) data.renames = Object.assign({}, obj.renames, data.renames || {});
+      if (obj.animFor) data.animFor = Object.assign({}, obj.animFor, data.animFor || {});
       if (obj.libRenames){ data.libRenames = Object.assign({}, obj.libRenames, data.libRenames || {}); applyLibRenames(); }
       if (obj.imgFit) data.imgFit = Object.assign({}, data.imgFit || {}, obj.imgFit);
       if (obj.images) Object.entries(obj.images).forEach(([k, d]) => { m++;
