@@ -1011,7 +1011,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 101</span><span id="ver-label">Version 9.9</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 102</span><span id="ver-label">Version 10.0</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1149,6 +1149,8 @@ input[type=date]{width:100%;display:block}
     return null;
   }
   const dropsOf = x => Array.isArray(x.drops) ? x.drops : (x.drop ? [x.drop] : []);
+  // Satz leeren, Satzart (Aufwärm-/Dropsatz) und Anzahl der Drop-Stufen bleiben erhalten
+  const clearSet = x => x.kind === 'warm' ? { reps:'', kg:'', kind:'warm' } : x.kind === 'drop' ? { reps:'', kg:'', kind:'drop', drops: (dropsOf(x).length ? dropsOf(x) : [{}]).map(() => ({ reps:'', kg:'' })) } : { reps:'', kg:'' };
   // Letzte gespeicherte Ausführung einer Übung (nach Datum)
   function lastEx(name){
     const n = (name || '').trim(); if (!n) return null;
@@ -1201,7 +1203,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 101;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 102;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1368,7 +1370,7 @@ input[type=date]{width:100%;display:block}
     const bg = document.createElement('div'); bg.className = 'dlg-bg';
     bg.innerHTML = `<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="clr-t" aria-describedby="clr-d">
       <h2 id="clr-t">Alle Werte leeren?</h2>
-      <p class="dlg-sub" id="clr-d">Wiederholungen, Gewichte und Drops aller Übungen in dieser Session werden geleert. Übungen, Sätze und Maschineneinstellungen bleiben. Gespeicherte Trainings sind nicht betroffen.</p>
+      <p class="dlg-sub" id="clr-d">Wiederholungen, Gewichte und Drops aller Übungen in dieser Session werden geleert. Übungen, Sätze, Satzarten (Aufwärm- und Dropsätze) und Maschineneinstellungen bleiben. Gespeicherte Trainings sind nicht betroffen.</p>
       <div class="dlg-btns"><button type="button" class="dlg-cancel">Abbrechen</button><button type="button" class="dlg-ok dlg-del">Leeren</button></div>
     </div>`;
     document.body.append(bg);
@@ -1376,7 +1378,7 @@ input[type=date]{width:100%;display:block}
     bg.addEventListener('click', e => { if (e.target === bg) close(); });
     bg.querySelector('.dlg-cancel').addEventListener('click', close);
     bg.querySelector('.dlg-del').addEventListener('click', () => {
-      data.draft.exercises.forEach(ex => { ex.sets = ex.sets.map(() => ({ reps:'', kg:'' })); });
+      data.draft.exercises.forEach(ex => { ex.sets = ex.sets.map(clearSet); });
       saveDraft(); close(); renderEditor();
       say('Alle Werte geleert.');
     });
@@ -2210,7 +2212,7 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
     if (act === 'reopen'){ data.draft.exercises[i].open = true; saveDraft(); renderEditor(); return; }
     if (act === 'clear'){
       const ex = data.draft.exercises[i];
-      ex.sets = ex.sets.map(() => ({ reps:'', kg:'' }));
+      ex.sets = ex.sets.map(clearSet);
       saveDraft(); renderEditor();
       say(`${ex.name}: Werte geleert.`);
       return;
