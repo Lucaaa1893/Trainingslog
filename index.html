@@ -1019,7 +1019,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 105</span><span id="ver-label">Version 10.3</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 106</span><span id="ver-label">Version 10.4</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1211,7 +1211,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 105;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 106;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1943,38 +1943,75 @@ input[type=date]{width:100%;display:block}
     return JSON.parse(new TextDecoder().decode(pt));
   }
   let hSyncing = false, hSyncInfo = '';
-  async function syncHealth(code, manual){
-    code = code || data.healthKey; if (!code || hSyncing || !navigator.onLine || !(crypto && crypto.subtle)) return false;
-    hSyncing = true;
+  // direkter Abgleich: Kurzbefehl legt Textdateien im privaten Repo ab (Ordner export/), App liest sie mit Token
+  const H_GH_REPO = 'Lucaaa1893/trainingslog-health';
+  const hGhOn = () => !!(data.hGh && data.hGh.token && data.hGh.repo);
+  const hLinked = () => !!(data.healthKey || hGhOn());
+  async function syncGh(g){
+    g = g || data.hGh;
+    const api = `https://api.github.com/repos/${g.repo}/contents/export`;
+    const h = { Authorization:'Bearer ' + g.token, Accept:'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' };
+    const r = await fetch(api + '?check=' + Date.now(), { headers:h, cache:'no-store' });
+    if (r.status === 401) throw { gh:'Token ungültig oder abgelaufen.' };
+    if (r.status === 403) throw { gh:'Token hat keine Leserechte für das Repo.' };
+    if (r.status === 404){
+      const rr = await fetch(`https://api.github.com/repos/${g.repo}?check=` + Date.now(), { headers:h, cache:'no-store' });
+      if (!rr.ok) throw { gh:'Repo nicht gefunden – Name und Token prüfen.' };
+      return 0;                                        // Repo da, aber noch kein Export
+    }
+    if (!r.ok) throw { gh:'Abgleich gerade nicht möglich.' };
+    const seen = new Set(data.hGhSeen || []);
+    const list = (await r.json()).filter(f => f.type === 'file' && /\.txt$/i.test(f.name) && !seen.has(f.sha)).sort((a, b) => a.name < b.name ? -1 : 1);
+    let n = 0;
+    for (const f of list){
+      const t = await fetch(api + '/' + encodeURIComponent(f.name) + '?check=' + Date.now(), { headers:Object.assign({}, h, { Accept:'application/vnd.github.raw' }), cache:'no-store' });
+      if (!t.ok) continue;
+      const txt = await t.text(), fd = /(\d{4}-\d{2}-\d{2})/.exec(f.name);
+      const p = parseHealth(/datum\s*:\s*\d{4}-/i.test(txt) || !fd ? txt : 'Datum: ' + fd[1] + '\n' + txt);
+      if (p){ data.health = data.health || {}; data.health[p.date] = Object.assign({}, data.health[p.date] || {}, p.vals); n++; }
+      seen.add(f.sha);
+    }
+    data.hGhSeen = [...seen];
+    return n;
+  }
+  async function syncHealth(code, manual, gh){
+    code = code || data.healthKey; gh = gh || (hGhOn() ? data.hGh : null);
+    if ((!code && !gh) || hSyncing || !navigator.onLine) return false;
+    hSyncing = true; let err = '';
     try {
-      const r = await fetch('./health.enc.json?check=' + Date.now(), { cache:'no-store' });
-      if (!r.ok) throw new Error('nf');
-      const all = await decryptHealth(await r.json(), code);
-      data.health = data.health || {};
-      Object.entries(all).forEach(([d, v]) => { data.health[d] = Object.assign({}, data.health[d] || {}, v); });
-      if (code !== data.healthKey) data.healthKey = code;
-      data.healthSync = Date.now(); persist(); hSyncInfo = '';
+      if (code && crypto && crypto.subtle){
+        try {
+          const r = await fetch('./health.enc.json?check=' + Date.now(), { cache:'no-store' });
+          if (!r.ok) throw new Error('nf');
+          const all = await decryptHealth(await r.json(), code);
+          data.health = data.health || {};
+          Object.entries(all).forEach(([d, v]) => { data.health[d] = Object.assign({}, data.health[d] || {}, v); });
+          if (code !== data.healthKey) data.healthKey = code;
+        } catch(e){ err = e && e.name === 'OperationError' ? 'Code falsch.' : 'Abgleich gerade nicht möglich.'; }
+      }
+      if (gh){
+        try { await syncGh(gh); if (gh !== data.hGh) data.hGh = gh; }
+        catch(e){ err = (e && e.gh) || 'Abgleich gerade nicht möglich.'; }
+      }
+      if (!err) data.healthSync = Date.now();
+      persist(); hSyncInfo = err;
       if (!$('#view-prog').hidden) renderHealth();
-      if (manual) say('Health-Werte abgeglichen.');
-      return true;
-    } catch(e){
-      hSyncInfo = e && e.name === 'OperationError' ? 'Code falsch.' : 'Abgleich gerade nicht möglich.';
-      if (manual) say(hSyncInfo, true);
-      return false;
+      if (manual) say(err || 'Health-Werte abgeglichen.', !!err);
+      return !err;
     } finally { hSyncing = false; }
   }
   let hSel = 'weight', hMsg = '', hMsgErr = false;
   function renderHealth(){
     if (!document.getElementById('health')) return;
     const H = data.health || {}, dates = Object.keys(H).sort();
-    const head = `<div class="hl-head"><h2>Körper & Erholung</h2>${data.healthKey ? `<button type="button" class="ghost alt hl-sync${hSyncing ? ' spin' : ''}" aria-label="Jetzt abgleichen">↻</button>` : ''}</div>` +
-      (data.healthKey && hMsg ? `<p class="hl-msg${hMsgErr ? ' err' : ''}">${hMsg}</p>` : '') +
-      (data.healthKey ? '' : `<div class="hl-key">${dates.length ? '' : '<p class="muted small" style="margin:0 0 10px">Gewicht, Schlaf, Schritte & Co. aus Apple Health – mit einem Kurzbefehl auf deinem iPhone, ganz ohne Konto.</p>'}
+    const head = `<div class="hl-head"><h2>Körper & Erholung</h2>${hLinked() ? `<button type="button" class="ghost alt hl-sync${hSyncing ? ' spin' : ''}" aria-label="Jetzt abgleichen">↻</button>` : ''}</div>` +
+      (hLinked() && hMsg ? `<p class="hl-msg${hMsgErr ? ' err' : ''}">${hMsg}</p>` : '') +
+      (hLinked() ? '' : `<div class="hl-key">${dates.length ? '' : '<p class="muted small" style="margin:0 0 10px">Gewicht, Schlaf, Schritte & Co. aus Apple Health – mit einem Kurzbefehl auf deinem iPhone, ganz ohne Konto.</p>'}
         ${hMsg ? `<p class="hl-msg${hMsgErr ? ' err' : ''}">${hMsg}</p>` : ''}
         <div class="row hl-btns"><button type="button" class="btn hl-paste">Werte einfügen</button><button type="button" class="ghost alt hl-guide">${dates.length ? 'Anleitung' : 'So geht\'s'}</button></div>
         <details class="hl-codebox"><summary>Ich habe einen Abgleich-Code</summary><div class="hl-key-row"><input id="hl-code" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="xxxx-xxxx-xxxx-xxxx"><button type="button" class="btn hl-go">OK</button></div>${hSyncInfo ? `<p class="nx-err" style="color:var(--bad,#E2362C)">${hSyncInfo}</p>` : ''}</details></div>`);
     if (!dates.length){
-      $('#health').innerHTML = `<div class="card hl">${head}${data.healthKey ? '<p class="muted small" style="margin:6px 0 0">Noch keine Werte – die ersten kommen nach dem nächsten Abend-Export.</p>' : ''}</div>`;
+      $('#health').innerHTML = `<div class="card hl">${head}${hLinked() ? '<p class="muted small" style="margin:6px 0 0">Noch keine Werte – die ersten kommen nach dem nächsten Abend-Export.</p>' : ''}</div>`;
       return;
     }
     const sel = calSel || today();
@@ -3179,12 +3216,17 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
     const own = days().filter(d => !['Push','Pull','Leg'].includes(d.name));
     $('#set-days').innerHTML = days().map(d => `<div class="set-day"><span class="dotc" style="background:${d.color}"></span><b>${esc(d.name)}</b>${own.some(o => o.name === d.name)
       ? `<button type="button" class="set-mini" data-dren="${esc(d.name)}">Umbenennen</button><button type="button" class="set-mini clr" data-ddel="${esc(d.name)}">Löschen</button>` : '<small>fest</small>'}</div>`).join('');
-    $('#set-health').innerHTML = data.healthKey
-      ? `<p class="muted small" style="margin:0 0 10px">Verbunden · ${Object.keys(data.health || {}).length} Tage gespeichert${data.healthSync ? ' · zuletzt abgeglichen ' + new Date(data.healthSync).toLocaleString('de-DE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : ''}</p>
-         <div class="row"><button type="button" class="ghost" id="set-h-sync">Jetzt abgleichen</button><button type="button" class="ghost alt clr" id="set-h-off">Code entfernen</button></div>`
-      : `<p class="muted small" style="margin:0 0 10px">${Object.keys(data.health || {}).length} Tage gespeichert. Werte kommen über einen Kurzbefehl und „Werte einfügen“.</p>
+    const nH = Object.keys(data.health || {}).length, lastS = data.healthSync ? ' · zuletzt abgeglichen ' + new Date(data.healthSync).toLocaleString('de-DE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+    $('#set-health').innerHTML = (hLinked()
+      ? `<p class="muted small" style="margin:0 0 10px">Verbunden${hGhOn() ? ' direkt mit ' + esc(data.hGh.repo) : ''} · ${nH} Tage gespeichert${lastS}</p>
+         <div class="row"><button type="button" class="ghost" id="set-h-sync">Jetzt abgleichen</button>${data.healthKey ? '<button type="button" class="ghost alt clr" id="set-h-off">Code entfernen</button>' : ''}${hGhOn() ? '<button type="button" class="ghost alt clr" id="set-gh-off">Token entfernen</button>' : ''}</div>`
+      : `<p class="muted small" style="margin:0 0 10px">${nH} Tage gespeichert. Werte kommen über einen Kurzbefehl und „Werte einfügen“.</p>
          <div class="row"><button type="button" class="ghost" id="set-h-paste">Werte einfügen</button><button type="button" class="ghost alt" id="set-h-guide">Anleitung</button></div>
-         <details class="hl-codebox"><summary>Ich habe einen Abgleich-Code</summary><div class="hl-key-row"><input id="set-h-code" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="xxxx-xxxx-xxxx-xxxx"><button type="button" class="btn" id="set-h-go">OK</button></div></details>`;
+         <details class="hl-codebox"><summary>Ich habe einen Abgleich-Code</summary><div class="hl-key-row"><input id="set-h-code" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="xxxx-xxxx-xxxx-xxxx"><button type="button" class="btn" id="set-h-go">OK</button></div></details>`)
+      + (hGhOn() ? '' : `<details class="hl-codebox"${data.healthKey ? '' : ' open'}><summary>Direkt vom iPhone (privates GitHub-Repo)</summary>
+         <p class="muted small" style="margin:8px 0">Der Kurzbefehl lädt die Werte jeden Abend in dein privates Repo, die App holt sie beim Öffnen automatisch. Der Token bleibt nur auf diesem Gerät und kommt nicht in die Sicherung.</p>
+         <input id="set-gh-repo" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" value="${esc((data.hGh && data.hGh.repo) || H_GH_REPO)}" style="margin-bottom:8px">
+         <div class="hl-key-row"><input id="set-gh-token" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="github_pat_…"><button type="button" class="btn" id="set-gh-go">Verbinden</button></div></details>`);
   }
   function openSettings(){ document.querySelectorAll('.set-seg').forEach(sg => { sg._fresh = true; }); renderSettings(); applyTheme(theme); $('#settings').hidden = false; $('#settings').scrollTop = 0; lockSync(); }
   function closeSettings(){ $('#settings').hidden = true; lockSync(); renderMeta(); if (!$('#view-prog').hidden) renderProgress(); }
@@ -3200,6 +3242,11 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
     if (e.target.closest('#set-h-paste')){ pasteHealth(() => { renderSettings(); $('#set-health').insertAdjacentHTML('afterbegin', `<p class="hl-msg">${hMsg}</p>`); }); return; }
     if (e.target.closest('#set-h-guide')){ healthGuide(); return; }
     if (e.target.closest('#set-h-off')){ delete data.healthKey; persist(); renderSettings(); return; }
+    if (e.target.closest('#set-gh-off')){ delete data.hGh; delete data.hGhSeen; persist(); renderSettings(); return; }
+    if (e.target.closest('#set-gh-go')){ const repo = ($('#set-gh-repo').value || '').trim().replace(/^https?:\/\/github\.com\//i, '').replace(/\/+$/, ''), token = ($('#set-gh-token').value || '').trim();
+      if (!/^[\w.-]+\/[\w.-]+$/.test(repo) || !token) return;
+      e.target.textContent = 'Verbinde …'; const ok = await syncHealth(null, false, { repo, token }); renderSettings();
+      if (ok) say('Verbunden – Health-Werte kommen jetzt automatisch.'); else $('#set-health').insertAdjacentHTML('beforeend', `<p class="nx-err" style="color:var(--bad,#E2362C)">${hSyncInfo || 'Verbinden nicht möglich.'}</p>`); return; }
     if (e.target.closest('#set-h-go')){ const c = ($('#set-h-code').value || '').trim().toLowerCase(); if (!c) return; const ok = await syncHealth(c, false); renderSettings(); if (!ok) $('#set-health').insertAdjacentHTML('beforeend', `<p class="nx-err" style="color:var(--bad,#E2362C)">${hSyncInfo}</p>`); return; }
   });
   function simpleDlg(title, sub, val, okTxt, danger, done){
