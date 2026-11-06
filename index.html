@@ -1019,7 +1019,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 104</span><span id="ver-label">Version 10.2</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 105</span><span id="ver-label">Version 10.3</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1211,7 +1211,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 104;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 105;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -3236,6 +3236,16 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
   }
 
   // ---- init ----
+  // Früher umbenannte Übungen: Animation des ursprünglichen Namens einmalig zurückholen
+  try { (() => {
+    const m = Object.assign({}, data.renames || {}, data.libRenames || {}); let ch = false;
+    for (const [orig, now] of Object.entries(m)){
+      if (!now || (data.animFor && data.animFor[now])) continue;
+      const k = exAnimKeyByName(orig);
+      if (k && k !== exAnimKeyByName(now)){ data.animFor = data.animFor || {}; data.animFor[now] = k; ch = true; }
+    }
+    if (ch){ persist(); renderEditor(); }
+  })(); } catch(_){}
   if (data.draft) delete data.draft.manualDay;   // beim Start immer heute
   syncDate(); renderMeta(); loadImgs(); setTimeout(() => syncHealth(), 800);
   document.addEventListener('visibilitychange', () => { if (!document.hidden && (!data.healthSync || Date.now() - data.healthSync > 30 * 60000)) syncHealth(); });
