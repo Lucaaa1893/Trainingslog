@@ -604,7 +604,7 @@ body.resting::after{content:'';display:block;height:84px}
 .bigc{display:block;width:100%;height:auto;margin:4px 0 10px}
 .hx-share{margin-top:12px}
 .cardlg{max-height:92vh;overflow:auto}
-.sc-img{display:block;width:100%;max-width:260px;margin:10px auto 0;border-radius:18px;box-shadow:0 12px 30px -10px rgba(0,0,0,.5)}
+.sc-img{display:block;width:100%;max-width:260px;margin:10px auto 0;border-radius:22px;box-shadow:0 12px 30px -10px rgba(0,0,0,.5)}
 .prlist{display:grid;gap:6px;margin:6px 0 4px}
 .prlist div{display:flex;flex-direction:column;background:rgba(255,255,255,.14);border-radius:14px;padding:8px 12px}
 .prlist span{font-size:13px;color:rgba(255,255,255,.8)}
@@ -1054,7 +1054,7 @@ body.resting::after{content:'';display:block;height:84px}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 109</span><span id="ver-label">Version 10.7</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 110</span><span id="ver-label">Version 10.8</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1284,7 +1284,7 @@ body.resting::after{content:'';display:block;height:84px}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 109;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 110;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -2685,9 +2685,8 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
     if (back){ data.draft.type = back; data.draft.exercises = planWith(back, stash[back]); delete stash[back]; if (Object.keys(stash).length) data.draft.stash = stash; }
     const ok = persist();
     renderMeta(); renderEditor(); updateTimer();
-    say(ok ? `Session gespeichert${ses.duration ? ' · ' + fmtDur(ses.duration) : ''}.${back ? ` Deine eingetragenen ${back}-Werte stehen wieder unter „Eintragen“.` : ''}` : 'Session angezeigt, aber der Browser speichert gerade nicht.', !ok);
+    say(ok ? `Session gespeichert${ses.duration ? ' · ' + fmtDur(ses.duration) : ''}${prs.length ? ` · 🏆 ${prs.length} neue${prs.length === 1 ? 'r' : ''} Rekord${prs.length === 1 ? '' : 'e'}` : ''}.${back ? ` Deine eingetragenen ${back}-Werte stehen wieder unter „Eintragen“.` : ''}` : 'Session angezeigt, aber der Browser speichert gerade nicht.', !ok);
     showTab('hist');
-    showCard(ses, prs, []);
   });
 
   // ---- history ----
@@ -2757,7 +2756,7 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
   }
   $('#history').addEventListener('click', e => {
     const sh = e.target.closest('[data-share]');
-    if (sh){ const ses = data.sessions.find(x => String(x.id) === sh.dataset.share); if (ses) showCard(ses, []); return; }
+    if (sh){ const ses = data.sessions.find(x => String(x.id) === sh.dataset.share); if (ses) showCard(ses, prsOf(ses)); return; }
     const ed = e.target.closest('[data-edit]');
     if (ed){ const ses = data.sessions.find(x => String(x.id) === ed.dataset.edit); if (ses) editSession(ses); return; }
   });
@@ -3275,38 +3274,78 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
 
   // Teilen-Karte (Story-Format 1080×1920)
   function rr(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  // Rekorde, die ein Training gegenüber allen früheren Trainings gebracht hat
+  function prsOf(ses){
+    const list = chron(), i = list.indexOf(ses), before = i >= 0 ? list.slice(0, i) : list.filter(x => x !== ses), out = [];
+    ses.exercises.forEach(e => { const st = exStats(e), prev = bestEver(e.name, before); if (st.best != null && prev && st.best > prev.best + 0.01) out.push({ name: e.name, set: st.bestSet, prev }); });
+    return out;
+  }
   function makeCard(ses, prs){
-    const c = document.createElement('canvas'); c.width = 1080; c.height = 1920;
+    const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H;
     const x = c.getContext('2d'), F = '-apple-system, "SF Pro Display", "Segoe UI", Roboto, sans-serif';
-    let g = x.createLinearGradient(0, 0, 1080, 1920); g.addColorStop(0, '#F7F9FC'); g.addColorStop(1, '#E3E8F2'); x.fillStyle = g; x.fillRect(0, 0, 1080, 1920);
-    [[140, 220, '#5AA0FF'], [960, 520, '#FF7DBE'], [880, 1720, '#FFC060'], [120, 1600, '#5EE0A0']].forEach(([cx, cy, col]) => {
-      const rg = x.createRadialGradient(cx, cy, 0, cx, cy, 520); rg.addColorStop(0, col + '88'); rg.addColorStop(1, col + '00'); x.fillStyle = rg; x.fillRect(0, 0, 1080, 1920); });
-    x.strokeStyle = 'rgba(30,45,70,.06)'; x.lineWidth = 2; for (let i = 0; i <= 1080; i += 72){ x.beginPath(); x.moveTo(i, 0); x.lineTo(i, 1920); x.stroke(); } for (let i = 0; i <= 1920; i += 72){ x.beginPath(); x.moveTo(0, i); x.lineTo(1080, i); x.stroke(); }
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const P = dark
+      ? { bg0:'#06080D', bg1:'#12151E', fg:'#F5F6FA', mut:'rgba(235,238,245,.62)', pan:'rgba(255,255,255,.07)', edge:'rgba(255,255,255,.16)', line:'rgba(255,255,255,.09)', grid:'rgba(255,255,255,.035)', good:'#3DDC84', glow:'66' }
+      : { bg0:'#F8FAFD', bg1:'#E4E9F3', fg:'#14161A', mut:'#5F6675', pan:'rgba(255,255,255,.74)', edge:'rgba(255,255,255,.98)', line:'rgba(20,30,50,.09)', grid:'rgba(30,45,70,.05)', good:'#1A9E4B', glow:'80' };
     const col = ses.type === 'Push' ? '#2F7BF5' : ses.type === 'Pull' ? '#9358F2' : dayColor(ses.type);
-    x.fillStyle = '#15171B'; x.font = `800 92px ${F}`; x.fillText('Trainingslog', 80, 200);
-    x.font = `600 40px ${F}`; x.fillStyle = '#5A6170'; x.fillText(fmtDate(ses.date), 80, 262);
-    rr(x, 80, 300, x.measureText(ses.type).width + 120, 84, 42); x.fillStyle = col; x.fill();
-    x.fillStyle = '#fff'; x.font = `700 46px ${F}`; x.fillText(ses.type, 140, 358);
+    const hex = /^#[0-9a-f]{6}$/i.test(col) ? col : '#2F7BF5';
+    const font = (w, sz) => { x.font = `${w} ${sz}px ${F}`; };
+    // Text passend machen: erst kleiner, dann kürzen
+    const fit = (txt, maxW, w, sz, min) => { font(w, sz); while (sz > min && x.measureText(txt).width > maxW){ sz -= 2; font(w, sz); } if (x.measureText(txt).width > maxW){ while (txt.length > 1 && x.measureText(txt + '…').width > maxW) txt = txt.slice(0, -1); txt = txt.trimEnd() + '…'; } return txt; };
+    const spaced = (txt, px, py, gap) => { for (const ch of txt){ x.fillText(ch, px, py); px += x.measureText(ch).width + gap; } return px; };
+    const panel = (px, py, w, h, r) => { rr(x, px, py, w, h, r); x.fillStyle = P.pan; x.fill(); x.strokeStyle = P.edge; x.lineWidth = 3; x.stroke(); };
+
+    // Hintergrund: weicher Verlauf, Lichtflecken in der Farbe des Trainingstags, feines Raster
+    let g = x.createLinearGradient(0, 0, W * .6, H); g.addColorStop(0, P.bg0); g.addColorStop(1, P.bg1); x.fillStyle = g; x.fillRect(0, 0, W, H);
+    [[920, 180, 760, hex], [80, 1050, 620, dark ? '#FF5FA8' : '#FF7DBE'], [1000, 1780, 640, dark ? '#22C7B8' : '#FFC060'], [140, 1860, 420, hex]].forEach(([cx, cy, rad, cl], i) => {
+      const rg = x.createRadialGradient(cx, cy, 0, cx, cy, rad); rg.addColorStop(0, cl + (i === 0 ? (dark ? '8C' : '99') : dark ? '33' : P.glow)); rg.addColorStop(1, cl + '00'); x.fillStyle = rg; x.fillRect(0, 0, W, H); });
+    x.strokeStyle = P.grid; x.lineWidth = 2; for (let i = 0; i <= W; i += 72){ x.beginPath(); x.moveTo(i, 0); x.lineTo(i, H); x.stroke(); } for (let i = 0; i <= H; i += 72){ x.beginPath(); x.moveTo(0, i); x.lineTo(W, i); x.stroke(); }
+
+    // Inhalt wird als Block senkrecht mittig gesetzt
+    const shown = ses.exercises.slice(0, 9), more = ses.exercises.length - shown.length, ROW = 104;
+    const listH = 44 + shown.length * ROW + (more > 0 ? 64 : 0) + 20;
+    const hasPr = prs && prs.length, total = 330 + 60 + 210 + 50 + listH + (hasPr ? 50 + 108 : 0);
+    let y = Math.max(110, Math.round((H - total) / 2));
+    const M = 80, prNames = new Set((prs || []).map(p => p.name));
+
+    // Kopf
+    x.textBaseline = 'alphabetic'; x.textAlign = 'left';
+    x.fillStyle = hex; x.beginPath(); x.arc(M + 12, y + 28, 12, 0, 7); x.fill();
+    x.fillStyle = P.mut; font(700, 34); spaced('TRAININGSLOG', M + 40, y + 40, 7);
+    x.fillStyle = P.fg; const title = fit(ses.type, W - 2 * M, 800, 168, 84); x.fillText(title, M - 6, y + 218);
+    rr(x, M, y + 252, 132, 12, 6); x.fillStyle = hex; x.fill();
+    x.fillStyle = P.mut; font(600, 44); x.fillText(new Date(ses.date + 'T00:00').toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long', year:'numeric' }), M, y + 326);
+    y += 330 + 60;
+
     // Kennzahlen
     const sets = ses.exercises.reduce((n, e) => n + e.sets.filter(isWork).length, 0);
     const vol = ses.exercises.reduce((a, e) => a + exStats(e).vol, 0);
-    const stats = [[ses.duration ? fmtDur(ses.duration) : '–', 'Dauer'], [String(sets), 'Sätze'], [vol >= 1000 ? (Math.round(vol / 100) / 10).toLocaleString('de-DE') + ' t' : Math.round(vol) + ' kg', 'Volumen']];
-    stats.forEach(([v, l], i) => { const bx = 80 + i * 314; rr(x, bx, 440, 290, 190, 44); x.fillStyle = 'rgba(255,255,255,.72)'; x.fill(); x.strokeStyle = 'rgba(255,255,255,.95)'; x.lineWidth = 3; x.stroke();
-      x.fillStyle = '#15171B'; x.font = `800 62px ${F}`; x.fillText(v, bx + 32, 530); x.fillStyle = '#6A7180'; x.font = `600 34px ${F}`; x.fillText(l, bx + 32, 588); });
-    // Übungen
-    const nEx = Math.min(9, ses.exercises.length), panelH = Math.max(260, 70 + nEx * 104 + 30);
-    let y = 700; rr(x, 60, y, 960, panelH, 56); x.fillStyle = 'rgba(255,255,255,.66)'; x.fill(); x.strokeStyle = 'rgba(255,255,255,.95)'; x.lineWidth = 3; x.stroke();
-    y += 90; const prNames = new Set((prs || []).map(p => p.name));
-    ses.exercises.slice(0, 9).forEach(e => {
-      const st = exStats(e), name = e.name.length > 30 ? e.name.slice(0, 29) + '…' : e.name;
-      x.fillStyle = '#15171B'; x.font = `700 40px ${F}`; x.fillText((prNames.has(e.name) ? '🏆 ' : '') + name, 110, y);
-      x.fillStyle = prNames.has(e.name) ? '#1FAA50' : '#5A6170'; x.font = `600 34px ${F}`;
-      const sw = `${st.sets} ${st.sets === 1 ? 'Satz' : 'Sätze'}`;
-      x.fillText(st.bestSet ? `${kg1(st.bestSet.kg)} kg × ${st.bestSet.reps}  ·  ${sw}` : `${st.reps} Wdh  ·  ${sw}`, 110, y + 48);
-      y += 104;
+    const stats = [[ses.duration ? fmtDur(ses.duration).replace(' min', '').replace(' h ', ':') : '–', ses.duration ? (ses.duration >= 60 ? 'Stunden' : 'Minuten') : 'Dauer'], [String(sets), sets === 1 ? 'Satz' : 'Sätze'], vol >= 1000 ? [(Math.round(vol / 100) / 10).toLocaleString('de-DE'), 'Tonnen bewegt'] : [String(Math.round(vol)), 'kg bewegt']];
+    const TW = (W - 2 * M - 2 * 24) / 3;
+    stats.forEach(([v, l], i) => { const bx = M + i * (TW + 24); panel(bx, y, TW, 210, 46);
+      x.fillStyle = P.fg; x.fillText(fit(v, TW - 56, 800, 84, 48), bx + 30, y + 112);
+      x.fillStyle = P.mut; x.fillText(fit(l, TW - 56, 600, 32, 24), bx + 32, y + 166); });
+    y += 210 + 50;
+
+    // Übungen: Name links, bester Satz rechts
+    panel(M - 20, y, W - 2 * M + 40, listH, 56);
+    let ry = y + 44; const L = M + 24, Rr = W - M - 24;
+    shown.forEach((e, i) => {
+      const st = exStats(e), pr = prNames.has(e.name);
+      const val = st.bestSet ? `${kg1(st.bestSet.kg)} kg × ${st.bestSet.reps}` : `${st.reps} Wdh`;
+      x.textAlign = 'right'; font(800, 42); x.fillStyle = pr ? P.good : P.fg; const vw = x.measureText(val).width; x.fillText(val, Rr, ry + 40);
+      font(600, 28); x.fillStyle = pr ? P.good : P.mut; x.fillText(pr ? '🏆 Rekord' : `${st.sets} ${st.sets === 1 ? 'Satz' : 'Sätze'}`, Rr, ry + 80);
+      x.textAlign = 'left'; x.fillStyle = P.fg; x.fillText(fit(e.name, Rr - L - vw - 36, 700, 40, 32), L, ry + 40);
+      font(600, 28); x.fillStyle = P.mut; x.fillText(muscleOf(e.name), L, ry + 80);
+      if (i < shown.length - 1 || more > 0){ x.strokeStyle = P.line; x.lineWidth = 2; x.beginPath(); x.moveTo(L, ry + ROW - 2); x.lineTo(Rr, ry + ROW - 2); x.stroke(); }
+      ry += ROW;
     });
-    if (prs && prs.length){ rr(x, 80, 1740, 920, 100, 50); x.fillStyle = '#1FAA50'; x.fill(); x.fillStyle = '#fff'; x.font = `800 44px ${F}`; x.textAlign = 'center';
-      x.fillText(`🏆 ${prs.length} neue${prs.length === 1 ? 'r' : ''} Rekord${prs.length === 1 ? '' : 'e'}!`, 540, 1806); x.textAlign = 'left'; }
+    if (more > 0){ x.textAlign = 'center'; font(600, 32); x.fillStyle = P.mut; x.fillText(`+ ${more} weitere ${more === 1 ? 'Übung' : 'Übungen'}`, W / 2, ry + 44); x.textAlign = 'left'; }
+    y += listH;
+
+    // Rekord-Banner
+    if (hasPr){ y += 50; g = x.createLinearGradient(M, y, W - M, y); g.addColorStop(0, '#2FBF6B'); g.addColorStop(1, '#17A05A'); rr(x, M, y, W - 2 * M, 108, 54); x.fillStyle = g; x.fill();
+      x.fillStyle = '#fff'; font(800, 46); x.textAlign = 'center'; x.fillText(`🏆 ${prs.length} neue${prs.length === 1 ? 'r' : ''} Rekord${prs.length === 1 ? '' : 'e'}`, W / 2, y + 71); x.textAlign = 'left'; }
     return c;
   }
   function showCard(ses, prs, xp){
