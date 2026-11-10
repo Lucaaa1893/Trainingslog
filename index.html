@@ -487,6 +487,37 @@ input[type=date]{width:100%;display:block}
   box-shadow:inset 0 1px 0 rgba(255,255,255,.28), 0 18px 40px -12px rgba(0,0,0,.4);font-weight:600;font-size:15px;white-space:nowrap;animation:menu-in .5s var(--spring)}
 .upd button{border:0;border-radius:999px;padding:10px 16px;font:700 15px/1 var(--f-body);color:#fff;background:var(--shine), linear-gradient(180deg,#4B8EFF,#2A6FEA)}
 
+/* Pausen-Timer */
+.rest{position:fixed;left:0;right:0;margin:0 auto;width:max-content;max-width:calc(100% - 24px);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:45;display:flex;align-items:center;gap:6px;
+  padding:6px 6px 6px 16px;border-radius:999px;color:#fff;background:rgba(104,106,113,.92);-webkit-backdrop-filter:blur(30px) saturate(170%);backdrop-filter:blur(30px) saturate(170%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28), 0 18px 40px -12px rgba(0,0,0,.4);font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;animation:menu-in .5s var(--spring);transition:background .3s}
+.rest[hidden]{display:none}
+body.resting::after{content:'';display:block;height:84px}
+.rest b{font:700 21px/1 var(--f-display);font-variant-numeric:tabular-nums;min-width:54px;margin-right:4px}
+.rest button{border:0;border-radius:999px;padding:9px 11px;font:600 14px/1 var(--f-body);color:#fff;background:rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.rest button::after{display:none}
+.rest-bar{position:absolute;left:0;bottom:0;height:3px;width:100%;transform-origin:left;transform:scaleX(var(--p,0));background:#5EE0A0;pointer-events:none}
+.rest.over{background:linear-gradient(180deg,#2FBF6B,#1F9E55)}
+.rest.over .rest-bar{display:none}
+#set-rest,#set-goal{grid-template-columns:repeat(5,minmax(0,1fr))}
+#set-rest button,#set-goal button{font-size:14px}
+/* Wiederholungs-Ziel */
+.sets-head .goal{text-transform:none;letter-spacing:0;font-weight:700;color:var(--accent-text)}
+.set input.hit{box-shadow:inset 0 0 0 2px rgba(47,191,107,.75)}
+.set input.low{box-shadow:inset 0 0 0 2px rgba(240,138,0,.7)}
+/* Scheibenrechner */
+.icon.pl-btn svg{display:block}
+.plates .pl-kg{font-size:20px;font-weight:700;text-align:center;margin-bottom:10px}
+.pl-seg{display:flex;align-items:center;gap:6px;margin-bottom:12px;font-size:13px;color:rgba(255,255,255,.8)}
+.pl-seg button{flex:1;border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:8px 4px;font:600 14px/1 var(--f-body);color:#fff;background:rgba(255,255,255,.1)}
+.pl-seg button.on{background:rgba(255,255,255,.4);border-color:rgba(255,255,255,.55)}
+.pl-seg button::after{display:none}
+.pl-svg{display:block;width:100%;height:auto;margin:2px 0 8px}
+.pl-txt{text-align:center;font-size:15px;line-height:1.4;margin:0 0 4px}
+.pl-txt b{font-size:17px}
+.pl-warn{text-align:center;font-size:13px;color:#FFD0CC;margin:0 0 6px}
+.plates .dlg-btns{grid-template-columns:1fr;margin-top:10px}
+
 /* iOS-26-Tab-Leiste: graue Pille in Ruhe, klare Glasblase in Bewegung */
 .tabs,.tabs.grabbing{overflow-x:clip;overflow-y:visible}
 .tabs::before{display:none}
@@ -997,6 +1028,7 @@ input[type=date]{width:100%;display:block}
 </section>
 
 
+<div class="rest" id="rest" hidden role="timer"><span class="rest-lbl">Pause</span><b id="rest-t">1:30</b><button type="button" data-r="-15" aria-label="15 Sekunden weniger">−15</button><button type="button" data-r="15" aria-label="15 Sekunden mehr">+15</button><button type="button" data-r="x" aria-label="Pause beenden">✕</button><span class="rest-bar" aria-hidden="true"></span></div>
 <div class="upd" id="upd" hidden><span>Neue Version verfügbar</span><button type="button" id="upd-go">Jetzt laden</button></div>
 </main>
 <div class="set-page" id="settings" hidden role="dialog" aria-modal="true" aria-labelledby="set-t">
@@ -1005,6 +1037,8 @@ input[type=date]{width:100%;display:block}
   <div class="card"><h2>Darstellung</h2><div class="set-seg" id="set-theme"><button type="button" data-th="light">☀︎ Hell</button><button type="button" data-th="dark">☾ Dunkel</button></div></div>
   <div class="card"><h2>Standard-Sätze pro Übung</h2><p class="muted small">So viele leere Sätze bekommt jede Übung beim Start eines Trainings.</p><div class="set-seg" id="set-sets"><button type="button" data-sets="2">2</button><button type="button" data-sets="3">3</button><button type="button" data-sets="4">4</button><button type="button" data-sets="5">5</button></div></div>
   <div class="card"><h2>Aufwärmsatz</h2><p class="muted small">Wenn an, bekommt jede Übung oben automatisch einen Aufwärmsatz.</p><div class="set-seg" id="set-warm"><button type="button" data-warm="0">Aus</button><button type="button" data-warm="1">An</button></div></div>
+  <div class="card"><h2>Pausen-Timer</h2><p class="muted small">Startet automatisch, wenn du einen Satz abhakst. Während der Pause kannst du mit −15 / +15 nachjustieren.</p><div class="set-seg" id="set-rest"><button type="button" data-rest="0">Aus</button><button type="button" data-rest="60">1:00</button><button type="button" data-rest="90">1:30</button><button type="button" data-rest="120">2:00</button><button type="button" data-rest="180">3:00</button></div></div>
+  <div class="card"><h2>Wiederholungs-Ziel</h2><p class="muted small">Steht bei jeder Übung über den Sätzen. Grüner Rand = oberes Ende geschafft, nächstes Mal mehr Gewicht. Oranger Rand = unter dem Ziel.</p><div class="set-seg" id="set-goal"><button type="button" data-goal="">Aus</button><button type="button" data-goal="6-8">6–8</button><button type="button" data-goal="8-10">8–10</button><button type="button" data-goal="8-12">8–12</button><button type="button" data-goal="10-15">10–15</button></div></div>
   <div class="card"><h2>Trainingstage</h2><p class="muted small">Push, Pull und Leg sind fest. Eigene Tage kannst du umbenennen oder löschen.</p><div id="set-days"></div><button type="button" class="ghost" id="set-day-new">+ Neuer Trainingstag</button></div>
   <div class="card"><h2>Health-Werte</h2><div id="set-health"></div></div>
   <div class="card backup" style="margin-top:0">
@@ -1019,7 +1053,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 107</span><span id="ver-label">Version 10.5</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 108</span><span id="ver-label">Version 10.6</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1211,7 +1245,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 107;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 108;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1358,6 +1392,122 @@ input[type=date]{width:100%;display:block}
   addEventListener('resize', () => closeMenu(true));
   const typeOpts = () => [...days().map(d => ({ value:d.name, label:d.name, color:d.color })), { value:'Sonstiges', label:'Sonstiges', color:'#9AA3B2' }, { value:'__new', label:'+ Neuer Trainingstag' }];
   const KIND_OPTS = [{value:'',label:'Normal'},{value:'warm',label:'Aufwärmsatz',color:'#14B8C4'},{value:'drop',label:'Dropsatz',color:'#F08A00'}];
+  // ---- Wiederholungs-Ziel (Einstellungen) ----
+  const repGoalTxt = () => data.repGoal == null ? '8-12' : data.repGoal;
+  const repGoal = () => { const m = /^(\d+)-(\d+)$/.exec(repGoalTxt()); return m ? { lo: +m[1], hi: +m[2] } : null; };
+  function repCls(s){
+    const g = repGoal(); if (!g || !s || s.kind === 'warm' || s.reps === '' || s.reps == null) return '';
+    const r = +s.reps; return r >= g.hi ? 'hit' : r < g.lo ? 'low' : '';
+  }
+
+  // ---- Pausen-Timer zwischen Sätzen ----
+  const restSec = () => data.restSec == null ? 90 : +data.restSec;
+  let restEnd = 0, restTot = 0, restTick = null, restHide = null, actx = null;
+  function audio(){ try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch(_){ actx = null; } return actx; }
+  function beep(){
+    const a = audio();
+    if (a) try { const t = a.currentTime + .02; [0, .25, .5].forEach((d, k) => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = k === 2 ? 1320 : 880; g.gain.setValueAtTime(.0001, t + d); g.gain.exponentialRampToValueAtTime(.35, t + d + .02); g.gain.exponentialRampToValueAtTime(.0001, t + d + .2); o.connect(g); g.connect(a.destination); o.start(t + d); o.stop(t + d + .22); }); } catch(_){}
+    try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch(_){}
+  }
+  function startRest(){
+    const s = restSec(); if (!s) return;
+    audio();   // iPhone: Ton nur nach einer Berührung erlaubt – hier wird er freigeschaltet
+    restTot = s; restEnd = Date.now() + s * 1000;
+    data.draft.restEnd = restEnd; data.draft.restTot = s; persist();
+    showRest();
+  }
+  function stopRest(){
+    restEnd = 0; clearInterval(restTick); clearTimeout(restHide); restTick = restHide = null;
+    if (data.draft){ delete data.draft.restEnd; delete data.draft.restTot; }
+    const el = $('#rest'); el.hidden = true; el.classList.remove('over'); document.body.classList.remove('resting'); persist();
+  }
+  function showRest(){ const el = $('#rest'); el.hidden = false; document.body.classList.add('resting'); el.classList.remove('over'); clearTimeout(restHide); clearInterval(restTick); restTick = setInterval(tickRest, 250); tickRest(); }
+  function tickRest(){
+    const el = $('#rest'), ms = restEnd - Date.now();
+    if (ms <= 0){
+      clearInterval(restTick); restTick = null;
+      el.classList.add('over'); el.querySelector('.rest-lbl').textContent = 'Pause vorbei'; $('#rest-t').textContent = 'Los!';
+      if (-ms < 5000) beep();   // nicht piepen, wenn die App erst viel später wieder geöffnet wird
+      if (data.draft){ delete data.draft.restEnd; delete data.draft.restTot; persist(); }
+      restHide = setTimeout(stopRest, 6000);
+      return;
+    }
+    const left = Math.ceil(ms / 1000);
+    el.querySelector('.rest-lbl').textContent = 'Pause';
+    $('#rest-t').textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+    el.style.setProperty('--p', Math.min(1, Math.max(0, 1 - ms / (restTot * 1000))).toFixed(3));
+  }
+  $('#rest').addEventListener('click', e => {
+    const b = e.target.closest('[data-r]'); if (!b) return;
+    if (b.dataset.r === 'x' || !restEnd){ stopRest(); return; }
+    const d = +b.dataset.r;
+    restEnd += d * 1000; restTot = Math.max(1, restTot + d);
+    data.draft.restEnd = restEnd; data.draft.restTot = restTot; persist();
+    if (!restTick) showRest(); else tickRest();
+  });
+  if (data.draft && data.draft.restEnd > Date.now()){ restEnd = data.draft.restEnd; restTot = data.draft.restTot || restSec(); setTimeout(showRest, 0); }
+  const resumeRest = () => { if (restEnd && restTick) tickRest(); };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) resumeRest(); });
+
+  // ---- Scheibenrechner für Langhantel-Übungen ----
+  const isBar = n => /langhantel|sz-stange|kreuzheben|military press|enges bankdrücken/i.test(n || '');
+  const PLATES = [25, 20, 15, 10, 5, 2.5, 1.25];
+  const PLATE_LOOK = { 25:['#E2362C',64,11], 20:['#2F7BF5',60,11], 15:['#F2C230',54,10], 10:['#22B455',46,9], 5:['#F4F4F4',36,7], 2.5:['#3A3D44',29,6], 1.25:['#B9BEC7',23,5] };
+  function plateCalc(total, bar){
+    let side = Math.round((total - bar) / 2 * 1000) / 1000; if (!(side >= 0)) return null;
+    const out = [];
+    PLATES.forEach(p => { while (side >= p - 1e-6){ out.push(p); side = Math.round((side - p) * 1000) / 1000; } });
+    return { out, rest: side };
+  }
+  function plateSVG(list){
+    const W = 300, H = 76, cy = H / 2, cx = W / 2;
+    let side = '', x = 0;
+    list.forEach(p => { const [c, h, w] = PLATE_LOOK[p]; side += `<rect x="${x}" y="${cy - h / 2}" width="${w}" height="${h}" rx="2.5" fill="${c}" stroke="rgba(0,0,0,.25)" stroke-width="1"/>`; x += w + 1.5; });
+    const inner = 74;   // Abstand Mitte → Beginn der Hülse
+    return `<svg class="pl-svg" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+      <rect x="6" y="${cy - 2.5}" width="${W - 12}" height="5" rx="2.5" fill="#C9CED6"/>
+      <rect x="${cx - inner - 4}" y="${cy - 6}" width="5" height="12" rx="1.5" fill="#9AA1AC"/><rect x="${cx + inner - 1}" y="${cy - 6}" width="5" height="12" rx="1.5" fill="#9AA1AC"/>
+      <g transform="translate(${cx + inner + 5} 0)">${side}</g>
+      <g transform="translate(${cx - inner - 5} 0) scale(-1 1)">${side}</g>
+    </svg>`;
+  }
+  function openPlates(i){
+    const ex = data.draft.exercises[i]; if (!ex) return;
+    const work = ex.sets.filter(x => x.kind !== 'warm');
+    const typed = work.find(x => x.kg !== '' && x.kg != null), L = lastEx(ex.name);
+    const lastKg = L && (L.ex.sets.find(x => x.kind !== 'warm' && x.kg != null) || {}).kg;
+    let bar = +data.barKg || 20;
+    const start = typed ? numOrNull(typed.kg) : lastKg != null ? lastKg : '';
+    const bg = document.createElement('div'); bg.className = 'dlg-bg';
+    bg.innerHTML = `<div class="dlg plates" role="dialog" aria-modal="true" aria-labelledby="pl-t">
+      <h2 id="pl-t">Scheibenrechner</h2>
+      <p class="dlg-sub">${esc(ex.name)}</p>
+      <input id="pl-kg" class="pl-kg" type="text" inputmode="decimal" autocomplete="off" value="${esc(kgTxt(start))}" placeholder="Gesamtgewicht in kg" aria-label="Gesamtgewicht in kg">
+      <div class="pl-seg" role="group" aria-label="Gewicht der Stange"><span>Stange</span>${[20, 15, 10].map(b => `<button type="button" data-bar="${b}">${b} kg</button>`).join('')}</div>
+      <div id="pl-out"></div>
+      <div class="dlg-btns"><button type="button" class="dlg-ok">Fertig</button></div>
+    </div>`;
+    document.body.append(bg);
+    const inp = bg.querySelector('#pl-kg'), out = bg.querySelector('#pl-out');
+    const draw = () => {
+      bg.querySelectorAll('[data-bar]').forEach(b => b.classList.toggle('on', +b.dataset.bar === bar));
+      const t = numOrNull(inp.value);
+      if (t == null){ out.innerHTML = `<p class="pl-txt">Gesamtgewicht eingeben (inkl. Stange).</p>`; return; }
+      const r = plateCalc(t, bar);
+      if (!r){ out.innerHTML = `<p class="pl-warn">Weniger als die Stange (${fmtKg(bar)} kg).</p>`; return; }
+      const near = Math.round((t - 2 * r.rest) * 100) / 100;
+      out.innerHTML = plateSVG(r.out)
+        + `<p class="pl-txt">${r.out.length ? `Pro Seite: <b>${r.out.map(fmtKg).join(' + ')} kg</b>` : 'Nur die Stange'}</p>`
+        + (r.rest > 0 ? `<p class="pl-warn">${fmtKg(t)} kg geht nicht genau – nächstmöglich ${fmtKg(near)} kg (kleinste Scheibe 1,25 kg).</p>` : '');
+    };
+    inp.addEventListener('input', () => { const c = inp.value.replace(/[^0-9.,]/g, '').replace(/([.,].*)[.,]/, '$1').slice(0, 7); if (c !== inp.value) inp.value = c; draw(); });
+    bg.addEventListener('click', e => {
+      const b = e.target.closest('[data-bar]'); if (b){ bar = +b.dataset.bar; data.barKg = bar; persist(); draw(); return; }
+      if (e.target === bg || e.target.closest('.dlg-ok')) bg.remove();
+    });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); inp.blur(); } if (e.key === 'Escape') bg.remove(); });
+    draw();
+  }
   // echte Eingaben (Wdh/kg/abgehakt) – eine vorausgefüllte Maschineneinstellung zählt nicht
   const filled = v => v !== '' && v != null;
   const hasValues = e => e.sets.some(x => filled(x.reps) || filled(x.kg) || x.done || (x.kind === 'drop' && dropsOf(x).some(d => filled(d.reps) || filled(d.kg))));
@@ -2172,6 +2322,7 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
       <section class="card ex${e.sets.length && e.sets.every(x => x.done) && !e.open ? ' collapsed' : ''}" data-i="${i}">
         <div class="ex-top">
           <span class="ex-idx">Übung ${i+1} von ${ex.length}</span>
+          ${isBar(e.name) ? `<button class="icon pl-btn" type="button" data-act="plates" aria-label="Scheibenrechner"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M1.5 10h17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="4" y="4" width="3" height="12" rx="1" fill="currentColor"/><rect x="13" y="4" width="3" height="12" rx="1" fill="currentColor"/><rect x="7.6" y="6.5" width="1.8" height="7" rx=".8" fill="currentColor"/><rect x="10.6" y="6.5" width="1.8" height="7" rx=".8" fill="currentColor"/></svg></button>` : ''}
           <button class="icon" type="button" data-act="up" ${i===0?'disabled':''} aria-label="Übung nach oben">↑</button>
           <button class="icon" type="button" data-act="down" ${i===ex.length-1?'disabled':''} aria-label="Übung nach unten">↓</button>
           <button class="icon rm" type="button" data-act="rm-ex" aria-label="Übung entfernen">✕</button>
@@ -2179,11 +2330,11 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
         <div class="ex-name"><span class="nm"${e.name ? ` data-anim="${esc(e.name)}" role="button" tabindex="0" aria-label="${esc(e.name)} – Bild anzeigen"` : ''}>${esc(e.name) || 'Übung wählen'}</span><button class="chev" type="button" data-act="pick" aria-label="Übung ${i+1} ändern: ${esc(e.name || 'keine gewählt')}">Ändern</button></div>
         <button class="ex-sum" type="button" data-act="reopen">✓ ${e.sets.length} ${e.sets.length===1?'Satz':'Sätze'} erledigt · antippen zum Öffnen</button>
         <input class="txt note" data-f="note" placeholder="Maschineneinstellung, z. B. Sitz Stufe 4" value="${esc(e.note)}" aria-label="Maschineneinstellung">
-        <div class="sets-head" title="Graue Zahlen zeigen die Werte vom letzten Mal"><span>#</span><span>Wdh</span><span>kg</span><span>Art</span><span></span></div>
+        <div class="sets-head" title="Graue Zahlen zeigen die Werte vom letzten Mal"><span>#</span><span>Wdh${repGoal() ? ` <i class="goal">${esc(repGoalTxt().replace('-', '–'))}</i>` : ''}</span><span>kg</span><span>Art</span><span></span></div>
         ${e.sets.map((s, j) => { const L = lastSet(e.name, j, e.sets), wn = e.sets.slice(0, j + 1).filter(x => x.kind !== 'warm').length; return `
           <div class="set${s.kind==='drop'?' drop':''}${s.kind==='warm'?' warm':''}${s.done?' isdone':''}">
             <button class="num chk${s.done?' on':''}" type="button" data-act="done" data-j="${j}" aria-pressed="${!!s.done}" aria-label="${s.kind==='warm'?'Aufwärmsatz':'Satz '+wn} ${s.done?'erledigt':'abhaken'}">${s.done?'✓':s.kind==='warm'?'A':wn}</button>
-            <input type="number" inputmode="numeric" min="0" step="1" data-f="reps" data-j="${j}" value="${esc(s.reps)}" placeholder="${L && L.reps != null ? L.reps : ''}" aria-label="Wiederholungen, Satz ${j+1}">
+            <input type="number" inputmode="numeric" min="0" step="1" data-f="reps" data-j="${j}" class="${repCls(s)}" value="${esc(s.reps)}" placeholder="${L && L.reps != null ? L.reps : ''}" aria-label="Wiederholungen, Satz ${j+1}">
             <input type="text" inputmode="decimal" autocomplete="off" data-f="kg" data-j="${j}" value="${esc(kgTxt(s.kg))}" placeholder="${L && L.kg != null ? fmtKg(L.kg) : ''}" aria-label="Gewicht in kg, Satz ${j+1}">
             <button class="kind-btn" type="button" data-act="kind" data-j="${j}" aria-haspopup="menu" aria-expanded="false" aria-label="Satzart, Satz ${j+1}: ${KIND_LABEL[s.kind||'']}">${KIND_LABEL[s.kind||'']}${CHEV}</button>
             <button class="icon" type="button" data-act="rm-set" data-j="${j}" aria-label="Satz ${j+1} entfernen">−</button>
@@ -2232,6 +2383,7 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
       const v = e.target.value;
       ex.sets[j][f] = v === '' ? '' : v;
       if (v !== '') markStart();
+      if (f === 'reps') e.target.className = repCls(ex.sets[j]);
       if (f === 'kind'){
         const set = ex.sets[j];
         if (v === 'drop' && !(set.drops && set.drops.length)) set.drops = [{ reps:'', kg:'' }];
@@ -2266,9 +2418,11 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
     const i = card ? +card.dataset.i : -1;
     const act = btn.dataset.act;
     if (act === 'pick'){ openPicker(i); return; }
+    if (act === 'plates'){ openPlates(i); return; }
     if (act === 'done'){
       const ex = data.draft.exercises[i], st = ex.sets[+btn.dataset.j];
       st.done = !st.done; markStart();
+      if (st.done) startRest();
       if (ex.sets.every(x => x.done)) ex.open = false;
       saveDraft(); renderEditor();
       if (ex.sets.every(x => x.done)) say(`${ex.name}: alle Sätze erledigt.`);
@@ -2465,6 +2619,7 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
     const prs = [];
     exercises.forEach(e => { const st = exStats(e), prev = bestEver(e.name, before); if (st.best != null && prev && st.best > prev.best + 0.01) prs.push({ name: e.name, set: st.bestSet, prev }); });
     data.sessions.push(ses);
+    stopRest();
     data.draft = newDraft();
     const ok = persist();
     renderMeta(); renderEditor(); updateTimer();
@@ -3222,6 +3377,8 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
   function renderSettings(){
     document.querySelectorAll('#set-sets [data-sets]').forEach(b => b.classList.toggle('def', +b.dataset.sets === setsN()));
     document.querySelectorAll('#set-warm [data-warm]').forEach(b => b.classList.toggle('def', +b.dataset.warm === (data.warmup ? 1 : 0)));
+    document.querySelectorAll('#set-rest [data-rest]').forEach(b => b.classList.toggle('def', +b.dataset.rest === restSec()));
+    document.querySelectorAll('#set-goal [data-goal]').forEach(b => b.classList.toggle('def', b.dataset.goal === repGoalTxt()));
     requestAnimationFrame(() => document.querySelectorAll('.set-seg').forEach(sg => placePill(sg)));
     const own = days().filter(d => !['Push','Pull','Leg'].includes(d.name));
     $('#set-days').innerHTML = days().map(d => `<div class="set-day"><span class="dotc" style="background:${d.color}"></span><b>${esc(d.name)}</b>${own.some(o => o.name === d.name)
@@ -3244,6 +3401,8 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
   $('#set-done').addEventListener('click', closeSettings);
   $('#settings').addEventListener('click', async e => {
     const sb = e.target.closest('[data-sets]'); if (sb){ data.defSets = +sb.dataset.sets; fitDraftSets(); persist(); renderSettings(); renderEditor(); return; }
+    const rb = e.target.closest('[data-rest]'); if (rb){ data.restSec = +rb.dataset.rest; if (!data.restSec) stopRest(); persist(); renderSettings(); return; }
+    const gb = e.target.closest('[data-goal]'); if (gb){ data.repGoal = gb.dataset.goal; persist(); renderSettings(); renderEditor(); return; }
     const wb = e.target.closest('[data-warm]'); if (wb){ data.warmup = wb.dataset.warm === '1'; fitDraftSets(); persist(); renderSettings(); renderEditor(); return; }
     if (e.target.closest('#set-day-new')){ closeSettings(); showTab('new'); openNewDay(); return; }
     const dr = e.target.closest('[data-dren]'); if (dr){ renameDay(dr.dataset.dren); return; }
