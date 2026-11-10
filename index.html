@@ -1019,7 +1019,7 @@ input[type=date]{width:100%;display:block}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 106</span><span id="ver-label">Version 10.4</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 107</span><span id="ver-label">Version 10.5</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1211,7 +1211,7 @@ input[type=date]{width:100%;display:block}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 106;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 107;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -1357,18 +1357,28 @@ input[type=date]{width:100%;display:block}
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && menuState) closeMenu(); });
   addEventListener('resize', () => closeMenu(true));
   const typeOpts = () => [...days().map(d => ({ value:d.name, label:d.name, color:d.color })), { value:'Sonstiges', label:'Sonstiges', color:'#9AA3B2' }, { value:'__new', label:'+ Neuer Trainingstag' }];
-  const hasData = e => e.note || e.sets.some(x => x.reps !== '' || x.kg !== '' || x.kind === 'drop');
   const KIND_OPTS = [{value:'',label:'Normal'},{value:'warm',label:'Aufwärmsatz',color:'#14B8C4'},{value:'drop',label:'Dropsatz',color:'#F08A00'}];
+  // echte Eingaben (Wdh/kg/abgehakt) – eine vorausgefüllte Maschineneinstellung zählt nicht
+  const filled = v => v !== '' && v != null;
+  const hasValues = e => e.sets.some(x => filled(x.reps) || filled(x.kg) || x.done || (x.kind === 'drop' && dropsOf(x).some(d => filled(d.reps) || filled(d.kg))));
   function setType(v){
     if (v === '__new'){ openNewDay(); return; }
-    const old = data.draft.exercises;
-    data.draft.type = v;
+    const d = data.draft, from = d.type, old = d.exercises;
+    if (v === from) return;
+    d.type = v;
     if (v !== 'Sonstiges'){
-      // Übungen des Tages in fester Reihenfolge; schon Eingetragenes wird übernommen
-      const plan = fromTemplate(v).map(t => { const had = old.find(e => e.name === t.name && hasData(e)); return had || t; });
-      const extra = old.filter(e => hasData(e) && !plan.some(p => p.name === e.name));
-      data.draft.exercises = [...plan, ...extra];
-    } else if (untouched(data.draft)) data.draft.exercises = [];
+      // Eingetragenes vom bisherigen Tag wird beiseitegelegt und kommt beim Zurückwechseln wieder –
+      // es wird NICHT an den neuen Tag angehängt
+      d.stash = d.stash || {};
+      const kept = old.filter(hasValues);
+      let carry = [];
+      if (from && from !== 'Sonstiges'){ if (kept.length) d.stash[from] = kept; else delete d.stash[from]; }
+      else carry = kept;   // aus „Sonstiges“ wird Eingetragenes mitgenommen
+      carry = [...(d.stash[v] || []), ...carry]; delete d.stash[v];
+      // Übungen des Tages in fester Reihenfolge, früher Eingetragenes an seinem Platz
+      const plan = fromTemplate(v).map(t => carry.find(e => e.name === t.name) || t);
+      d.exercises = [...plan, ...carry.filter(e => !plan.includes(e))];
+    } else if (untouched(d)) d.exercises = [];
     saveDraft(); renderMeta(); renderEditor();
   }
   $('#s-type').addEventListener('click', e => openMenu(e.currentTarget, typeOpts(), data.draft.type, setType));
