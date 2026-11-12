@@ -1054,7 +1054,7 @@ body.resting::after{content:'';display:block;height:84px}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 111</span><span id="ver-label">Version 10.9</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 112</span><span id="ver-label">Version 11.0</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1284,7 +1284,7 @@ body.resting::after{content:'';display:block;height:84px}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 111;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 112;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -2637,7 +2637,48 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
 
 
   // ---- save session ----
+  // v112: vor dem Speichern auf leere oder halb ausgefüllte Felder hinweisen
+  function missingFields(d){
+    const out = [];
+    (d.exercises || []).forEach(e => {
+      const name = (e.name || '').trim(); if (!name) return;
+      let wn = 0;
+      (e.sets || []).forEach(x => {
+        const warm = x.kind === 'warm', lbl = warm ? 'Aufwärmsatz' : `Satz ${++wn}`;
+        if (x.kind === 'drop'){
+          const hasR = filled(x.reps), hasK = filled(x.kg);
+          if (!hasR && !hasK) out.push(`${name}: ${lbl} ist leer`);
+          else if (!hasR) out.push(`${name}: ${lbl} – Wiederholungen fehlen`);
+          else if (!hasK) out.push(`${name}: ${lbl} – Gewicht fehlt`);
+          dropsOf(x).forEach((dr, k) => {
+            const r = filled(dr.reps), g = filled(dr.kg);
+            if (!r && !g) out.push(`${name}: ${lbl}, Drop ${k + 1} ist leer`);
+            else if (!r) out.push(`${name}: ${lbl}, Drop ${k + 1} – Wiederholungen fehlen`);
+            else if (!g) out.push(`${name}: ${lbl}, Drop ${k + 1} – Gewicht fehlt`);
+          });
+          return;
+        }
+        const hasR = filled(x.reps), hasK = filled(x.kg);
+        if (!hasR && !hasK){ if (!warm) out.push(`${name}: ${lbl} ist leer`); }
+        else if (!hasR) out.push(`${name}: ${lbl} – Wiederholungen fehlen`);
+        else if (!hasK) out.push(`${name}: ${lbl} – Gewicht fehlt`);
+      });
+    });
+    return out;
+  }
   $('#save').addEventListener('click', () => {
+    const d = data.draft;
+    if (d.date && d.date <= today()){
+      const miss = missingFields(d);
+      if (miss.length){
+        const shown = miss.slice(0, 8).map(t => `• ${esc(t)}`).join('<br>') + (miss.length > 8 ? `<br>… und ${miss.length - 8} weitere` : '');
+        simpleDlg('Noch nicht alles ausgefüllt', `${shown}<br><br>Leere Sätze werden beim Speichern weggelassen.`, null, 'Trotzdem speichern', false, () => { doSave(); }, 'Zurück');
+        return;
+      }
+    }
+    doSave();
+  });
+  function doSave(){
     const d = data.draft;
     if (!d.date){ say('Bitte ein Datum wählen.', true); return; }
     if (d.date > today()){ say('Das Datum liegt in der Zukunft. Bitte heute oder einen früheren Tag wählen.', true); return; }
@@ -2687,7 +2728,7 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
     renderMeta(); renderEditor(); updateTimer();
     say(ok ? `Session gespeichert${ses.duration ? ' · ' + fmtDur(ses.duration) : ''}${prs.length ? ` · 🏆 ${prs.length} neue${prs.length === 1 ? 'r' : ''} Rekord${prs.length === 1 ? '' : 'e'}` : ''}.${back ? ` Deine eingetragenen ${back}-Werte stehen wieder unter „Eintragen“.` : ''}` : 'Session angezeigt, aber der Browser speichert gerade nicht.', !ok);
     showTab('hist');
-  });
+  }
 
   // ---- history ----
   function renderHistory(){
@@ -3529,10 +3570,10 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
       if (ok) say('Verbunden – Health-Werte kommen jetzt automatisch.'); else $('#set-health').insertAdjacentHTML('beforeend', `<p class="nx-err" style="color:var(--bad,#E2362C)">${hSyncInfo || 'Verbinden nicht möglich.'}</p>`); return; }
     if (e.target.closest('#set-h-go')){ const c = ($('#set-h-code').value || '').trim().toLowerCase(); if (!c) return; const ok = await syncHealth(c, false); renderSettings(); if (!ok) $('#set-health').insertAdjacentHTML('beforeend', `<p class="nx-err" style="color:var(--bad,#E2362C)">${hSyncInfo}</p>`); return; }
   });
-  function simpleDlg(title, sub, val, okTxt, danger, done){
+  function simpleDlg(title, sub, val, okTxt, danger, done, cancelTxt){
     const bg = document.createElement('div'); bg.className = 'dlg-bg';
     bg.innerHTML = `<div class="dlg" role="dialog" aria-modal="true"><h2>${title}</h2><p class="dlg-sub">${sub}</p>${val != null ? `<input type="text" class="sd-in" value="${esc(val)}" maxlength="24" autocomplete="off">` : ''}<p class="nx-err" hidden></p>
-      <div class="dlg-btns" style="margin-top:12px"><button type="button" class="dlg-cancel">Abbrechen</button><button type="button" class="dlg-ok${danger ? ' dlg-del' : ''}">${okTxt}</button></div></div>`;
+      <div class="dlg-btns" style="margin-top:12px"><button type="button" class="dlg-cancel">${cancelTxt || 'Abbrechen'}</button><button type="button" class="dlg-ok${danger ? ' dlg-del' : ''}">${okTxt}</button></div></div>`;
     document.body.append(bg);
     const close = () => bg.remove(), inp = bg.querySelector('.sd-in');
     if (inp) setTimeout(() => { inp.focus(); inp.select(); }, 50);
