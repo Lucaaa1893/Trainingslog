@@ -1054,7 +1054,7 @@ body.resting::after{content:'';display:block;height:84px}
     <button class="ghost" id="imp-apply" type="button">Text übernehmen</button>
     <p class="status" id="bstatus" role="status" aria-live="polite"></p>
   </div>
-  <p class="ver"><span hidden id="ver-txt">Version 110</span><span id="ver-label">Version 10.8</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
+  <p class="ver"><span hidden id="ver-txt">Version 111</span><span id="ver-label">Version 10.9</span> · <button type="button" class="ver-btn" id="ver-check">Nach Updates suchen</button></p>
   </div>
 </div>
 <div class="sheet-bg" id="sheet" hidden>
@@ -1284,7 +1284,7 @@ body.resting::after{content:'';display:block;height:84px}
 
   // ---- Update-Prüfung: vergleicht die eigene Version mit der auf GitHub ----
   const TAB_IDS = ['new','hist','prog','ex'];
-  const MY_VERSION = 110;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
+  const MY_VERSION = 111;   // interne Build-Nummer für die Update-Prüfung; angezeigt wird ver-label
   async function serverVersion(){
     const r = await fetch('./index.html?check=' + Date.now(), { cache:'no-store' });
     const t = await r.text(); const m = /id="ver-txt">Version (\d+)</.exec(t) || /Version (\d+)</.exec(t);
@@ -3209,24 +3209,34 @@ Schlaf:</pre>Danach Aktion <b>„In Zwischenablage kopieren“</b>.</li>
     if (/bauch|crunch|plank|core/.test(n)) return 'Bauch';
     return 'Sonstige';
   }
+  // v111: zählt nur die Kalenderwoche (Mo–So) und nur Sätze, die wirklich gemacht wurden
+  let musWeek = 0, musAll = [];
+  const setDoneOrFilled = x => x.kind !== 'warm' && (x.done || filled(x.reps) || filled(x.kg) || (x.kind === 'drop' && dropsOf(x).some(d => filled(d.reps) || filled(d.kg))));
   function muscleCard(all){
-    const since = new Date(); since.setDate(since.getDate() - 6);
-    const iso = isoDay(since);
+    musAll = all;
+    const mon = new Date(); mon.setHours(0, 0, 0, 0); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7) + musWeek * 7);
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    const from = isoDay(mon), to = isoDay(sun);
+    const fmt = d => d.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit' });
     const cnt = {}; MUSCLE_ORDER.forEach(m => cnt[m] = 0);
-    all.filter(s => s.date >= iso).forEach(s => s.exercises.forEach(e => {
-      const m = muscleOf(e.name); cnt[m] = (cnt[m] || 0) + e.sets.filter(isWork).length;
+    all.filter(s => s.date >= from && s.date <= to).forEach(s => s.exercises.forEach(e => {
+      const m = muscleOf(e.name); cnt[m] = (cnt[m] || 0) + e.sets.filter(setDoneOrFilled).length;
     }));
     const keys = [...MUSCLE_ORDER, ...Object.keys(cnt).filter(k => !MUSCLE_ORDER.includes(k) && cnt[k])];
     const max = Math.max(20, ...keys.map(k => cnt[k]));
-    return `<div class="card mus">
-      <div class="vol-head"><h2>Muskelgruppen</h2><span class="muted small">Arbeitssätze der letzten 7 Tage</span></div>
+    const lbl = musWeek === 0 ? 'Diese Woche' : musWeek === -1 ? 'Letzte Woche' : `vor ${-musWeek} Wochen`;
+    const nb = 'background:none;border:0;color:inherit;font-size:18px;padding:0 8px;cursor:pointer';
+    return `<div class="card mus" id="mus-card">
+      <div class="vol-head"><h2>Muskelgruppen</h2>
+        <span class="muted small" style="display:flex;align-items:center;white-space:nowrap"><button type="button" style="${nb}" onclick="musNav(-1)" aria-label="Woche zurück">‹</button>${lbl}: ${fmt(mon)} – ${fmt(sun)}<button type="button" style="${nb}${musWeek >= 0 ? ';visibility:hidden' : ''}" onclick="musNav(1)" aria-label="Woche vor">›</button></span></div>
       ${keys.map(k => { const v = cnt[k] || 0, cls = v >= 10 ? 'ok' : v > 0 ? 'low' : 'none'; return `
         <div class="mrow"><span class="mname">${esc(k)}</span>
           <div class="mbar"><i class="${cls}" style="width:${(v / max * 100).toFixed(1)}%"></i><b class="mgoal" style="left:${(10 / max * 100).toFixed(1)}%"></b><b class="mgoal" style="left:${(20 / max * 100).toFixed(1)}%"></b></div>
           <span class="mval">${v}</span></div>`; }).join('')}
-      <p class="muted small" style="margin:10px 2px 0">Striche = Richtwert für Muskelaufbau: etwa 10–20 Sätze pro Muskelgruppe und Woche. Aufwärmsätze zählen nicht.</p>
+      <p class="muted small" style="margin:10px 2px 0">Zählt Arbeitssätze von Montag bis Sonntag, jeden Montag geht's wieder bei 0 los. Es zählen nur Sätze mit eingetragenen Werten oder Haken, Aufwärmsätze nicht. Striche = Richtwert für Muskelaufbau: etwa 10–20 Sätze pro Muskelgruppe und Woche.</p>
     </div>`;
   }
+  window.musNav = d => { musWeek = Math.min(0, musWeek + d); const el = document.getElementById('mus-card'); if (el) el.outerHTML = muscleCard(musAll); };
 
   // Rekorde
   function bestEver(name, sessions){
